@@ -134,8 +134,8 @@ export const CounsellorStudentReport: React.FC = () => {
             <ResponsiveContainer width="100%" height={210}>
               <LineChart data={report.checkin_trend}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="week_start" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
-                <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} width={24} />
+                <XAxis dataKey="week_start" tick={{ fontSize: 11, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
+                <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} width={24} />
                 <Tooltip />
                 <Line dataKey="academic_score" stroke="#7c6ff7" strokeWidth={2} dot={{ r: 3 }} name="Academic" />
                 <Line dataKey="emotional_score" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} name="Emotional" />

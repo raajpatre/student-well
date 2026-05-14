@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiCall } from '../lib/api';
 
 type User = {
   id: string;
@@ -28,22 +29,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedToken = localStorage.getItem('sw_token');
       if (storedToken) {
         try {
-          const res = await fetch('http://localhost:3001/api/auth/me', {
-            headers: {
-              Authorization: `Bearer ${storedToken}`,
-            },
-          });
-          
-          if (res.ok) {
-            const data = await res.json();
-            setToken(storedToken);
-            setUser(data.user);
-          } else {
-            // Token is invalid or expired
-            localStorage.removeItem('sw_token');
-          }
-        } catch (error) {
-          console.error('Failed to validate token:', error);
+          const data = await apiCall<{ user: User }>('/api/auth/me');
+          setToken(storedToken);
+          setUser(data.user);
+        } catch {
+          // Token is invalid or expired
+          localStorage.removeItem('sw_token');
         }
       }
       setIsLoading(false);

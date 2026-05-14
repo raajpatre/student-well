@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { apiCall } from '../lib/api';
+
+type LoginResponse = { token: string; user: { id: string; tenant_id: string; role: string; full_name: string } };
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -18,13 +21,10 @@ export const LoginPage: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const data = await apiCall<LoginResponse>('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: { email, password },
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Login failed');
       login(data.token, data.user);
       if (from === '/') {
         switch (data.user.role) {
@@ -36,8 +36,8 @@ export const LoginPage: React.FC = () => {
       } else {
         navigate(from, { replace: true });
       }
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong. Please try again.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -53,14 +53,14 @@ export const LoginPage: React.FC = () => {
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <div style={{
             width: 56, height: 56, borderRadius: 16,
-            background: 'linear-gradient(135deg, var(--accent), #a78bfa)',
+            background: 'linear-gradient(135deg, var(--sage), var(--sage-deep))',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 16px', fontSize: 26
           }}>🌱</div>
           <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.5, marginBottom: 6 }}>
-            Student<span style={{ color: 'var(--accent)' }}>Well</span>
+            Student<span style={{ color: 'var(--sage)' }}>Well</span>
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+          <p style={{ fontSize: 14, color: 'var(--text-3)' }}>
             Sign in to your portal
           </p>
         </div>
@@ -74,7 +74,7 @@ export const LoginPage: React.FC = () => {
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label htmlFor="email" style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-dim)' }}>
+            <label htmlFor="email" style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
               Email address
             </label>
             <input
@@ -90,7 +90,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label htmlFor="password" style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-dim)' }}>
+            <label htmlFor="password" style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-2)' }}>
               Password
             </label>
             <input
@@ -115,7 +115,7 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', marginTop: 32, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+        <p style={{ textAlign: 'center', marginTop: 32, fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6 }}>
           Reach out to your college administrator<br />if you can't access your account.
         </p>
       </div>

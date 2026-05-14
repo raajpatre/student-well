@@ -26,7 +26,7 @@ export const StudentLayout: React.FC<{ children: React.ReactNode }> = ({ childre
       <nav className="student-topnav">
         <span className="brand">Student<span>Well</span></span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{user?.full_name?.split(' ')[0]}</span>
+          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{user?.full_name?.split(' ')[0]}</span>
           <button
             onClick={handleLogout}
             className="btn btn-ghost btn-sm"

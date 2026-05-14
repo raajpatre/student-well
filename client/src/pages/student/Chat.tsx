@@ -147,7 +147,7 @@ export const ChatPage: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>AI Support Chat</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Private and confidential</p>
+            <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Private and confidential</p>
           </div>
           <button className="btn btn-primary btn-sm" onClick={startNewSession} style={{ gap: 6 }}>
             <Plus size={16} /> New Chat
@@ -180,7 +180,7 @@ export const ChatPage: React.FC = () => {
                       weekday: 'short', month: 'short', day: 'numeric'
                     })}
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
                     {new Date(s.started_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     {s.student_shared && <span style={{ marginLeft: 8, color: 'var(--good)' }}>• Shared</span>}
                   </div>
@@ -192,7 +192,7 @@ export const ChatPage: React.FC = () => {
                     flexShrink: 0
                   }} title="Sensitive session" />
                 )}
-                <ChevronLeft size={16} style={{ color: 'var(--text-muted)', transform: 'rotate(180deg)' }} />
+                <ChevronLeft size={16} style={{ color: 'var(--text-3)', transform: 'rotate(180deg)' }} />
               </button>
             ))}
           </div>
@@ -243,7 +243,7 @@ export const ChatPage: React.FC = () => {
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 8 }}>
         {messages.length === 0 && !isLoadingMessages && (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-3)' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>💙</div>
             <p style={{ fontSize: 15, lineHeight: 1.6 }}>
               Hi, I'm here to listen. What's been on your mind lately?
@@ -275,7 +275,7 @@ export const ChatPage: React.FC = () => {
             <div style={{ display: 'flex', gap: 4, padding: '12px 16px', background: 'var(--surface-raised)', borderRadius: 18 }}>
               {[0, 1, 2].map((i) => (
                 <div key={i} style={{
-                  width: 7, height: 7, borderRadius: '50%', background: 'var(--text-muted)',
+                  width: 7, height: 7, borderRadius: '50%', background: 'var(--text-3)',
                   animation: 'pulse-anim 1.2s infinite', animationDelay: `${i * 0.2}s`
                 }} />
               ))}

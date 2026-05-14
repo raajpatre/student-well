@@ -94,7 +94,7 @@ export const DashboardPage: React.FC = () => {
         <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
           Hey, {user?.full_name?.split(' ')[0] || 'there'} 👋
         </h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>
           {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' })}
         </p>
       </div>
@@ -102,7 +102,7 @@ export const DashboardPage: React.FC = () => {
       {/* Counsellor Banner */}
       {showCounsellorBanner && (
         <div className="banner banner-info" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          <Bell size={18} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
+          <Bell size={18} style={{ color: 'var(--sage)', flexShrink: 0, marginTop: 2 }} />
           <p style={{ fontSize: 14, lineHeight: 1.5 }}>
             Someone from the support team will be in touch with you soon. You're not alone in this.
           </p>
@@ -115,7 +115,7 @@ export const DashboardPage: React.FC = () => {
           className="card"
           style={{
             background: 'linear-gradient(135deg, rgba(124, 111, 247, 0.15), rgba(124, 111, 247, 0.05))',
-            borderColor: 'var(--accent-border)',
+            borderColor: 'var(--border-focus)',
             cursor: 'pointer'
           }}
           onClick={() => navigate('/student/checkin')}
@@ -124,7 +124,7 @@ export const DashboardPage: React.FC = () => {
             <div>
               <div style={{ fontSize: 20, marginBottom: 6 }}>🌱</div>
               <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>This week's check-in is ready</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Takes about 90 seconds</p>
+              <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Takes about 90 seconds</p>
             </div>
             <button className="btn btn-primary btn-sm" onClick={() => navigate('/student/checkin')}>
               Check in now
@@ -138,7 +138,7 @@ export const DashboardPage: React.FC = () => {
         <div className="section-header">
           <span className="section-title">Your Wellbeing</span>
           {signals?.last_updated && (
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
               Updated {timeAgo(signals.last_updated)}
             </span>
           )}
@@ -159,12 +159,12 @@ export const DashboardPage: React.FC = () => {
                     <StatusBadge status={signals?.[statusKey] as any} />
                   </div>
                   {signals?.[suggestionKey] && (
-                    <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.5 }}>
                       {signals[suggestionKey]}
                     </p>
                   )}
                   {!signals && (
-                    <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
                       Complete your first check-in to see insights here.
                     </p>
                   )}
@@ -190,9 +190,9 @@ export const DashboardPage: React.FC = () => {
               }}
               onClick={() => navigate(to)}
             >
-              <Icon size={18} style={{ color: 'var(--accent)' }} />
+              <Icon size={18} style={{ color: 'var(--sage)' }} />
               <span style={{ fontSize: 14, fontWeight: 500 }}>{label}</span>
-              <ChevronRight size={14} style={{ color: 'var(--text-muted)', marginLeft: 'auto' }} />
+              <ChevronRight size={14} style={{ color: 'var(--text-3)', marginLeft: 'auto' }} />
             </button>
           ))}
         </div>

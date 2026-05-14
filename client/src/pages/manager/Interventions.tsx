@@ -56,11 +56,11 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ intervention, onClose, onUpda
         <div className="mgr-slideover-header">
           <div>
             <h2 style={{ fontSize: 15, fontWeight: 700 }}>{intervention.student_name}</h2>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
               Assigned to {intervention.counsellor_name}
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
             <X size={18} />
           </button>
         </div>
@@ -87,7 +87,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ intervention, onClose, onUpda
               { label: 'Branch', value: intervention.student_branch || '—' },
             ].map(({ label, value }) => (
               <div key={label} style={{ background: 'var(--surface-raised)', borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
                 <div style={{ fontSize: 14, fontWeight: 600 }}>{value}</div>
               </div>
             ))}
@@ -95,15 +95,15 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ intervention, onClose, onUpda
 
           {intervention.manager_note && (
             <div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Manager Note</div>
-              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, background: 'var(--surface-raised)', padding: '10px 12px', borderRadius: 'var(--radius-md)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Manager Note</div>
+              <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5, background: 'var(--surface-raised)', padding: '10px 12px', borderRadius: 'var(--radius-md)' }}>
                 {intervention.manager_note}
               </p>
             </div>
           )}
 
           <div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Update Status</div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Update Status</div>
             <select
               value={newStatus}
               onChange={e => setNewStatus(e.target.value)}
@@ -144,7 +144,7 @@ export const InterventionsPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Active Interventions</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+          <p style={{ color: 'var(--text-3)', fontSize: 13 }}>
             {interventions.length} open case{interventions.length !== 1 ? 's' : ''}
             {overdueCount > 0 && (
               <span style={{ marginLeft: 10 }} className="overdue-badge">
@@ -171,13 +171,13 @@ export const InterventionsPage: React.FC = () => {
 
       <div className="mgr-table-wrap">
         {isLoading
-          ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
+          ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>Loading…</div>
           : interventions.length === 0
             ? (
               <div style={{ padding: 48, textAlign: 'center' }}>
                 <CheckCircle size={36} style={{ color: '#22d3a0', margin: '0 auto 12px' }} />
                 <p style={{ fontWeight: 600, marginBottom: 4 }}>No active interventions</p>
-                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>All cases are resolved or not yet assigned.</p>
+                <p style={{ fontSize: 13, color: 'var(--text-3)' }}>All cases are resolved or not yet assigned.</p>
               </div>
             )
             : (
@@ -209,30 +209,30 @@ export const InterventionsPage: React.FC = () => {
                           }}>{i.student_name.charAt(0)}</div>
                           <div>
                             <div style={{ fontWeight: 500 }}>{i.student_name}</div>
-                            {i.student_branch && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{i.student_branch}</div>}
+                            {i.student_branch && <div style={{ fontSize: 11, color: 'var(--text-3)' }}>{i.student_branch}</div>}
                           </div>
                         </div>
                       </td>
-                      <td style={{ color: 'var(--text-dim)' }}>{i.counsellor_name}</td>
+                      <td style={{ color: 'var(--text-2)' }}>{i.counsellor_name}</td>
                       <td>
                         <span className={`status-badge-sm status-${i.status}`}>
                           {statusLabels[i.status] || i.status}
                         </span>
                       </td>
-                      <td style={{ color: 'var(--text-muted)' }}>{formatDate(i.assigned_at)}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>
+                      <td style={{ color: 'var(--text-3)' }}>{formatDate(i.assigned_at)}</td>
+                      <td style={{ color: 'var(--text-3)' }}>
                         {i.first_contact_at
                           ? <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} style={{ color: '#22d3a0' }} />{formatDate(i.first_contact_at)}</span>
-                          : <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} style={{ color: i.is_overdue ? '#f59e0b' : 'var(--text-muted)' }} />Pending</span>
+                          : <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} style={{ color: i.is_overdue ? '#f59e0b' : 'var(--text-3)' }} />Pending</span>
                         }
                       </td>
                       <td>
                         {i.is_overdue
                           ? <span className="overdue-badge"><AlertTriangle size={10} />{i.days_since_assignment}d</span>
-                          : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{i.days_since_assignment}d</span>
+                          : <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{i.days_since_assignment}d</span>
                         }
                       </td>
-                      <td style={{ color: 'var(--accent)', fontSize: 12 }}>View →</td>
+                      <td style={{ color: 'var(--sage)', fontSize: 12 }}>View →</td>
                     </tr>
                   ))}
                 </tbody>

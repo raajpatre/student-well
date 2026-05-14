@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { apiCall } from '../../lib/api';
 
 type Dimension = 'emotional' | 'sleep' | 'social';
 
@@ -33,15 +32,8 @@ export const CheckinWidget: React.FC = () => {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch(`${API_URL}/checkins/status`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setStatus(data);
-      }
+      const data = await apiCall<CheckinStatus>('/api/checkins/status');
+      setStatus(data);
     } catch (err) {
       console.error('Failed to fetch checkin status', err);
     } finally {
@@ -56,7 +48,7 @@ export const CheckinWidget: React.FC = () => {
   const handleSubmit = async (dimension: Dimension, score: number) => {
     if (submitting) return;
     setSubmitting(true);
-    
+
     // Optimistic UI update
     const previousStatus = status;
     if (status) {
@@ -68,18 +60,10 @@ export const CheckinWidget: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`${API_URL}/checkins/submit`, {
+      await apiCall('/api/checkins/submit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ dimension, response_score: score })
+        body: { dimension, response_score: score },
       });
-
-      if (!res.ok) {
-        throw new Error('Failed to submit check-in');
-      }
     } catch (err) {
       console.error(err);
       // Revert on failure
@@ -113,7 +97,7 @@ export const CheckinWidget: React.FC = () => {
           {3 - status.pending.length}/3 Completed
         </span>
       </div>
-      
+
       <div className="text-center mb-8">
         <p className="text-xl font-medium text-gray-700">{DIMENSION_PROMPTS[activeDimension]}</p>
       </div>

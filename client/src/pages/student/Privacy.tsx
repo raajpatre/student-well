@@ -71,7 +71,7 @@ export const PrivacyPage: React.FC = () => {
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Privacy & Controls</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>You are in control of your data.</p>
+        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>You are in control of your data.</p>
       </div>
 
       {successMsg && (
@@ -91,9 +91,9 @@ export const PrivacyPage: React.FC = () => {
               cursor: 'pointer', textAlign: 'left'
             }}
           >
-            <Icon size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+            <Icon size={18} style={{ color: 'var(--sage)', flexShrink: 0 }} />
             <span style={{ flex: 1, fontSize: 15, fontWeight: 600 }}>{title}</span>
-            {expanded === id ? <ChevronUp size={16} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />}
+            {expanded === id ? <ChevronUp size={16} style={{ color: 'var(--text-3)' }} /> : <ChevronDown size={16} style={{ color: 'var(--text-3)' }} />}
           </button>
 
           {expanded === id && (
@@ -101,7 +101,7 @@ export const PrivacyPage: React.FC = () => {
               {content.map(({ label, desc }) => (
                 <div key={label} style={{ paddingTop: 14 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{label}</div>
-                  <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>{desc}</p>
+                  <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6 }}>{desc}</p>
                 </div>
               ))}
             </div>
@@ -123,7 +123,7 @@ export const PrivacyPage: React.FC = () => {
             disabled={isDownloading}
             style={{ justifyContent: 'flex-start', gap: 10 }}
           >
-            <Download size={16} style={{ color: 'var(--accent)' }} />
+            <Download size={16} style={{ color: 'var(--sage)' }} />
             {isDownloading ? 'Preparing your data...' : 'Download my data'}
           </button>
 
@@ -149,7 +149,7 @@ export const PrivacyPage: React.FC = () => {
           ) : (
             <div style={{ background: 'var(--warning-light)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 'var(--radius-md)', padding: '14px 16px' }}>
               <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Are you sure?</p>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 14 }}>
+              <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6, marginBottom: 14 }}>
                 Opting out will stop all wellness tracking. Your college support team won't be able to proactively reach out, and your check-in history will no longer be collected. You can always opt back in.
               </p>
               <div style={{ display: 'flex', gap: 10 }}>

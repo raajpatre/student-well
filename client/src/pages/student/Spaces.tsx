@@ -82,7 +82,7 @@ export const SpacesPage: React.FC = () => {
           </div>
           <button
             onClick={() => setStudyToggle((v) => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: studyToggle ? 'var(--good)' : 'var(--text-muted)', fontSize: 12, fontWeight: 500 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: studyToggle ? 'var(--good)' : 'var(--text-3)', fontSize: 12, fontWeight: 500 }}
           >
             {studyToggle ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
             Study Together
@@ -99,7 +99,7 @@ export const SpacesPage: React.FC = () => {
             style={{ width: '100%', resize: 'none', border: 'none', background: 'transparent', fontSize: 14, outline: 'none' }}
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{newPost.length}/500</span>
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{newPost.length}/500</span>
             <button className="btn btn-primary btn-sm" onClick={submitPost} disabled={!newPost.trim() || isPosting}>
               <Plus size={14} /> Post
             </button>
@@ -139,7 +139,7 @@ export const SpacesPage: React.FC = () => {
                           disabled={flaggedPosts.has(post.id)}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-                            background: 'none', border: 'none', color: flaggedPosts.has(post.id) ? 'var(--text-muted)' : 'var(--warning)',
+                            background: 'none', border: 'none', color: flaggedPosts.has(post.id) ? 'var(--text-3)' : 'var(--warning)',
                             fontSize: 13, cursor: 'pointer', width: '100%', borderRadius: 4
                           }}
                         >
@@ -150,7 +150,7 @@ export const SpacesPage: React.FC = () => {
                   </div>
                 </div>
                 <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text)' }}>{post.content}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>
                   {new Date(post.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -165,7 +165,7 @@ export const SpacesPage: React.FC = () => {
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Social Spaces</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Connect with people who get it</p>
+        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Connect with people who get it</p>
       </div>
 
       {isLoading ? (
@@ -189,12 +189,12 @@ export const SpacesPage: React.FC = () => {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                 <h3 style={{ fontSize: 15, fontWeight: 600 }}>{space.name}</h3>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Users size={12} /> {space.member_count}
                 </span>
               </div>
               {space.description && (
-                <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 10, lineHeight: 1.5 }}>
                   {space.description}
                 </p>
               )}

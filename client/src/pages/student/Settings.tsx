@@ -50,7 +50,7 @@ export const SettingsPage: React.FC = () => {
   const Section: React.FC<{ icon: React.ElementType; title: string; children: React.ReactNode }> = ({ icon: Icon, title, children }) => (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <Icon size={16} style={{ color: 'var(--accent)' }} />
+        <Icon size={16} style={{ color: 'var(--sage)' }} />
         <span className="section-title">{title}</span>
       </div>
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -78,7 +78,7 @@ export const SettingsPage: React.FC = () => {
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Settings</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Personalise your experience</p>
+        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Personalise your experience</p>
       </div>
 
       <Section icon={Clock} title="Check-in Preferences">
@@ -132,7 +132,7 @@ export const SettingsPage: React.FC = () => {
             onClick={() => update('notifications_enabled', !(current?.notifications_enabled ?? true))}
             style={{
               width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: (current?.notifications_enabled ?? true) ? 'var(--accent)' : 'var(--surface-raised)',
+              background: (current?.notifications_enabled ?? true) ? 'var(--sage)' : 'var(--surface-raised)',
               position: 'relative', transition: 'background 0.2s'
             }}
           >
@@ -159,7 +159,7 @@ export const SettingsPage: React.FC = () => {
       <div className="divider" />
 
       <div className="card" style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 12 }}>
+        <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 12 }}>
           To change your password, you'll be redirected to a secure page.
         </p>
         <button

@@ -53,7 +53,7 @@ const AddCounsellorForm: React.FC<{ onSuccess: () => void; onCancel: () => void 
   };
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--accent-border)', borderRadius: 'var(--radius-lg)', padding: 20, marginBottom: 20 }}>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-focus)', borderRadius: 'var(--radius-lg)', padding: 20, marginBottom: 20 }}>
       <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Add New Counsellor</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
         <input style={fieldStyle} placeholder="Full name *" value={form.full_name} onChange={set('full_name')} />
@@ -137,7 +137,7 @@ export const CounsellorPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Counsellors</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>{counsellors.length} registered</p>
+          <p style={{ color: 'var(--text-3)', fontSize: 13 }}>{counsellors.length} registered</p>
         </div>
         <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           onClick={() => setShowAdd(v => !v)}>
@@ -152,7 +152,7 @@ export const CounsellorPage: React.FC = () => {
             {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 180, borderRadius: 12 }} />)}
           </div>
         : counsellors.length === 0
-          ? <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No counsellors yet. Add one above.</p>
+          ? <p style={{ color: 'var(--text-3)', fontSize: 13 }}>No counsellors yet. Add one above.</p>
           : (
             <div className="mgr-counsellor-grid">
               {counsellors.map(c => (
@@ -161,8 +161,8 @@ export const CounsellorPage: React.FC = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
-                        width: 36, height: 36, borderRadius: '50%', background: 'var(--accent-light)',
-                        color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        width: 36, height: 36, borderRadius: '50%', background: 'var(--sage-light)',
+                        color: 'var(--sage)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontWeight: 800, fontSize: 14, flexShrink: 0,
                       }}>{c.full_name.charAt(0)}</div>
                       <div>
@@ -180,7 +180,7 @@ export const CounsellorPage: React.FC = () => {
                   )}
 
                   {/* Capacity */}
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', justifyContent: 'space-between' }}>
                     <span>Caseload</span>
                     <span style={{ fontWeight: 600, color: c.current_caseload_count >= c.capacity_limit ? '#f97316' : 'var(--text)' }}>
                       {c.current_caseload_count} / {c.capacity_limit}
@@ -189,7 +189,7 @@ export const CounsellorPage: React.FC = () => {
                   <div className="counsellor-capacity-bar">
                     <div className="counsellor-capacity-fill" style={{
                       width: `${Math.min(100, (c.current_caseload_count / c.capacity_limit) * 100)}%`,
-                      background: c.current_caseload_count >= c.capacity_limit ? '#f97316' : 'var(--accent)',
+                      background: c.current_caseload_count >= c.capacity_limit ? '#f97316' : 'var(--sage)',
                     }} />
                   </div>
 

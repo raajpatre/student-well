@@ -28,7 +28,7 @@ interface SemesterReport {
 }
 
 const STATS = [
-  { key: 'total_active_students', label: 'Active Students', color: 'var(--accent)' },
+  { key: 'total_active_students', label: 'Active Students', color: 'var(--sage)' },
   { key: 'new_flags_this_week', label: 'New Flags (Week)', color: '#f97316' },
   { key: 'pending_assignments', label: 'Pending Assign.', color: '#f59e0b' },
   { key: 'open_interventions', label: 'Open Cases', color: '#7c6ff7' },
@@ -51,7 +51,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       background: 'var(--surface-raised)', border: '1px solid var(--border)',
       borderRadius: 8, padding: '8px 12px', fontSize: 12,
     }}>
-      <p style={{ color: 'var(--text-muted)', marginBottom: 4 }}>{label}</p>
+      <p style={{ color: 'var(--text-3)', marginBottom: 4 }}>{label}</p>
       {payload.map((p: any) => (
         <p key={p.dataKey} style={{ color: p.color, fontWeight: 600 }}>
           {p.name}: {p.value}{p.unit || ''}
@@ -69,7 +69,7 @@ export const ManagerDashboard: React.FC = () => {
   return (
     <div className="fade-in">
       <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Overview</h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 24 }}>
+      <p style={{ color: 'var(--text-3)', fontSize: 13, marginBottom: 24 }}>
         {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
       </p>
 
@@ -95,7 +95,7 @@ export const ManagerDashboard: React.FC = () => {
         <div>
           <div className="mgr-section-title">Wellness Heatmap — by Branch / Batch</div>
           {!heatmapData?.heatmap?.length
-            ? <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No data yet.</p>
+            ? <p style={{ color: 'var(--text-3)', fontSize: 13 }}>No data yet.</p>
             : <div className="mgr-heatmap">
                 {heatmapData.heatmap.map(cell => {
                   const maxRisk = Math.max(cell.academic_risk_count, cell.emotional_risk_count, cell.social_risk_count);
@@ -138,9 +138,9 @@ export const ManagerDashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height={150}>
               <BarChart data={report?.flag_trend || []} barSize={14}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false}
+                <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
                   tickFormatter={w => w.slice(5)} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} width={24} />
+                <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} width={24} />
                 <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="count" name="Flags" fill="#f97316" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -153,9 +153,9 @@ export const ManagerDashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height={150}>
               <LineChart data={report?.weekly_engagement || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false}
+                <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
                   tickFormatter={w => w.slice(5)} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false}
+                <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
                   width={30} unit="%" domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip />} />
                 <Line dataKey="rate" name="Completion" stroke="#22d3a0" strokeWidth={2}

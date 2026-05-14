@@ -86,7 +86,7 @@ export const CheckinPage: React.FC = () => {
       }}>
         <div style={{ fontSize: 64 }}>🌟</div>
         <h2 style={{ fontSize: 22, fontWeight: 700 }}>Check-in complete!</h2>
-        <p style={{ color: 'var(--text-muted)', fontSize: 15, maxWidth: 280, lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--text-3)', fontSize: 15, maxWidth: 280, lineHeight: 1.6 }}>
           Thank you for taking a moment for yourself. Your wellbeing snapshot has been updated.
         </p>
         <button className="btn btn-primary" onClick={() => navigate('/student/dashboard')}>
@@ -104,7 +104,7 @@ export const CheckinPage: React.FC = () => {
           style={{ padding: '8px', borderRadius: '50%' }}>
           <ChevronLeft size={20} />
         </button>
-        <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>Weekly Check-in</span>
+        <span style={{ fontSize: 14, color: 'var(--text-3)' }}>Weekly Check-in</span>
       </div>
 
       {/* Progress bar */}
@@ -114,15 +114,15 @@ export const CheckinPage: React.FC = () => {
             <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
               <div style={{
                 width: 36, height: 36, borderRadius: '50%',
-                background: i < step ? 'var(--good)' : i === step ? 'var(--accent)' : 'var(--surface-raised)',
-                border: i === step ? '2px solid var(--accent)' : '2px solid var(--border)',
+                background: i < step ? 'var(--good)' : i === step ? 'var(--sage)' : 'var(--surface-raised)',
+                border: i === step ? '2px solid var(--sage)' : '2px solid var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 16, transition: 'all 0.3s',
-                color: i <= step ? '#fff' : 'var(--text-muted)'
+                color: i <= step ? '#fff' : 'var(--text-3)'
               }}>
                 {i < step ? '✓' : q.emoji}
               </div>
-              <span style={{ fontSize: 10, color: i === step ? 'var(--accent)' : 'var(--text-muted)' }}>
+              <span style={{ fontSize: 10, color: i === step ? 'var(--sage)' : 'var(--text-3)' }}>
                 {q.dimension}
               </span>
             </div>
@@ -130,7 +130,7 @@ export const CheckinPage: React.FC = () => {
         </div>
         <div style={{ height: 3, background: 'var(--surface-raised)', borderRadius: 99, overflow: 'hidden' }}>
           <div style={{
-            height: '100%', background: 'var(--accent)', borderRadius: 99,
+            height: '100%', background: 'var(--sage)', borderRadius: 99,
             width: `${progress}%`, transition: 'width 0.5s ease'
           }} />
         </div>
@@ -152,14 +152,14 @@ export const CheckinPage: React.FC = () => {
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
                 gap: 6, padding: '14px 4px', borderRadius: 'var(--radius-md)',
-                border: selected === value ? '2px solid var(--accent)' : '2px solid var(--border)',
-                background: selected === value ? 'var(--accent-light)' : 'var(--surface)',
+                border: selected === value ? '2px solid var(--sage)' : '2px solid var(--border)',
+                background: selected === value ? 'var(--sage-light)' : 'var(--surface)',
                 cursor: 'pointer', transition: 'all 0.2s',
                 transform: selected === value ? 'scale(1.08)' : 'scale(1)',
               }}
             >
               <span style={{ fontSize: 26 }}>{emoji}</span>
-              <span style={{ fontSize: 10, color: selected === value ? 'var(--accent)' : 'var(--text-muted)', fontWeight: 500 }}>
+              <span style={{ fontSize: 10, color: selected === value ? 'var(--sage)' : 'var(--text-3)', fontWeight: 500 }}>
                 {label}
               </span>
             </button>

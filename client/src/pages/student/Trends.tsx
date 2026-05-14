@@ -58,14 +58,14 @@ export const TrendsPage: React.FC = () => {
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
       <div>
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Your Trends</h1>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>12-week view of your wellbeing</p>
+        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>12-week view of your wellbeing</p>
       </div>
 
       {/* Streak */}
       {!isLoading && (
         <div className="card" style={{
           background: 'linear-gradient(135deg, rgba(124,111,247,0.15), rgba(34,211,160,0.08))',
-          borderColor: 'var(--accent-border)',
+          borderColor: 'var(--border-focus)',
           display: 'flex', alignItems: 'center', gap: 16
         }}>
           <div style={{ fontSize: 36 }}><Flame size={36} style={{ color: 'var(--warning)' }} /></div>
@@ -73,11 +73,11 @@ export const TrendsPage: React.FC = () => {
             <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>
               {data?.streak ?? 0}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>
               week{(data?.streak ?? 0) === 1 ? '' : 's'} in a row
             </div>
           </div>
-          <div style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--text-muted)' }}>
+          <div style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--text-3)' }}>
             Engagement streak
           </div>
         </div>
@@ -87,7 +87,7 @@ export const TrendsPage: React.FC = () => {
       <div>
         <div className="section-header">
           <span className="section-title">Check-in Heatmap</span>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
             <Calendar size={12} style={{ display: 'inline', marginRight: 4 }} />
             Last 12 weeks
           </span>
@@ -101,7 +101,7 @@ export const TrendsPage: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: `80px repeat(12, 1fr)`, gap: 4, marginBottom: 8 }}>
               <div />
               {weeks.map((w) => (
-                <div key={w} style={{ fontSize: 9, color: 'var(--text-muted)', textAlign: 'center' }}>
+                <div key={w} style={{ fontSize: 9, color: 'var(--text-3)', textAlign: 'center' }}>
                   {new Date(w).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
                 </div>
               ))}
@@ -113,7 +113,7 @@ export const TrendsPage: React.FC = () => {
                 key={key}
                 style={{ display: 'grid', gridTemplateColumns: `80px repeat(12, 1fr)`, gap: 4, marginBottom: 6 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)' }}>
                   <span>{emoji}</span>
                   <span>{label}</span>
                 </div>
@@ -147,7 +147,7 @@ export const TrendsPage: React.FC = () => {
               ].map(({ label, color }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <div style={{ width: 12, height: 12, borderRadius: 3, background: color }} />
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{label}</span>
                 </div>
               ))}
             </div>
@@ -171,7 +171,7 @@ export const TrendsPage: React.FC = () => {
                   <div key={key}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 13 }}>
                       <span>{emoji}</span>
-                      <span style={{ color: 'var(--text-dim)' }}>{label}</span>
+                      <span style={{ color: 'var(--text-2)' }}>{label}</span>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 48 }}>
                       {last4.map((val, i) => (
@@ -184,7 +184,7 @@ export const TrendsPage: React.FC = () => {
                             transition: 'height 0.5s ease',
                             minHeight: 6,
                           }} />
-                          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>W{i + 1}</span>
+                          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>W{i + 1}</span>
                         </div>
                       ))}
                     </div>

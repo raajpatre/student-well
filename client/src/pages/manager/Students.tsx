@@ -96,9 +96,9 @@ const AssignModal: React.FC<{
         <div className="mgr-modal-header">
           <div>
             <h2 style={{ fontSize: 16, fontWeight: 700 }}>Assign Counsellor</h2>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{report.student.full_name}</p>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{report.student.full_name}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={18} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
         </div>
 
         <div className="mgr-modal-body">
@@ -106,9 +106,9 @@ const AssignModal: React.FC<{
           <div className="mgr-modal-left">
             <div className="mgr-section-title" style={{ marginBottom: 10 }}>Student Summary</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, marginBottom: 16 }}>
-              <div><span style={{ color: 'var(--text-muted)' }}>Roll: </span>{report.student.roll_number || '—'}</div>
-              <div><span style={{ color: 'var(--text-muted)' }}>Branch: </span>{report.student.branch || '—'} · Batch {report.student.batch || '—'}</div>
-              <div><span style={{ color: 'var(--text-muted)' }}>Semester: </span>{report.student.semester || '—'}</div>
+              <div><span style={{ color: 'var(--text-3)' }}>Roll: </span>{report.student.roll_number || '—'}</div>
+              <div><span style={{ color: 'var(--text-3)' }}>Branch: </span>{report.student.branch || '—'} · Batch {report.student.batch || '—'}</div>
+              <div><span style={{ color: 'var(--text-3)' }}>Semester: </span>{report.student.semester || '—'}</div>
             </div>
 
             {snap && (
@@ -116,11 +116,11 @@ const AssignModal: React.FC<{
                 <div className="mgr-section-title">Wellness Snapshot</div>
                 {['academic', 'emotional', 'social'].map(dim => (
                   <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                    <span style={{ width: 65, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{dim}</span>
+                    <span style={{ width: 65, color: 'var(--text-3)', textTransform: 'capitalize' }}>{dim}</span>
                     <span className={`risk-badge risk-${(snap as any)[`${dim}_status`] === 'risk' ? 'high' : 'watch'}`} style={{ fontSize: 10 }}>
                       {(snap as any)[`${dim}_status`] || 'ok'}
                     </span>
-                    <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                    <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
                       {(snap as any)[`${dim}_score`]?.toFixed(1) ?? '—'}/10
                     </span>
                   </div>
@@ -134,7 +134,7 @@ const AssignModal: React.FC<{
                 <ResponsiveContainer width="100%" height={100}>
                   <LineChart data={report.checkin_trend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="week_start" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
+                    <XAxis dataKey="week_start" tick={{ fontSize: 9, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
                     <YAxis domain={[0, 10]} hide />
                     <Tooltip />
                     <Line dataKey="academic_score" stroke="#7c6ff7" strokeWidth={1.5} dot={false} name="Academic" />
@@ -165,7 +165,7 @@ const AssignModal: React.FC<{
           <div className="mgr-modal-right">
             <div className="mgr-section-title">Select Counsellor</div>
             {counsellors.length === 0
-              ? <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No counsellors found.</p>
+              ? <p style={{ fontSize: 13, color: 'var(--text-3)' }}>No counsellors found.</p>
               : counsellors.map(c => (
                 <div
                   key={c.id}
@@ -174,22 +174,22 @@ const AssignModal: React.FC<{
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div className="counsellor-pick-name">{c.full_name}</div>
-                    {c.is_on_leave && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>On Leave</span>}
+                    {c.is_on_leave && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>On Leave</span>}
                   </div>
                   {c.personality_description && (
-                    <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>
+                    <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3, lineHeight: 1.4 }}>
                       {c.personality_description}
                     </p>
                   )}
                   <div style={{ marginTop: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>
                       <span>Caseload</span>
                       <span>{c.current_caseload_count} / {c.capacity_limit}</span>
                     </div>
                     <div className="counsellor-capacity-bar">
                       <div className="counsellor-capacity-fill" style={{
                         width: `${Math.min(100, (c.current_caseload_count / c.capacity_limit) * 100)}%`,
-                        background: c.current_caseload_count >= c.capacity_limit ? '#f97316' : 'var(--accent)',
+                        background: c.current_caseload_count >= c.capacity_limit ? '#f97316' : 'var(--sage)',
                       }} />
                     </div>
                   </div>
@@ -231,11 +231,11 @@ const SlideOver: React.FC<{
         <div className="mgr-slideover-header">
           <div>
             <h2 style={{ fontSize: 15, fontWeight: 700 }}>{flag.student_name}</h2>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
               {flag.branch} · Batch {flag.batch} · Sem {flag.semester}
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
             <X size={18} />
           </button>
         </div>
@@ -249,7 +249,7 @@ const SlideOver: React.FC<{
                 <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
                   <RiskBadge level={flag.risk_level} />
                   <StatusBadge status={flag.assignment_status || flag.flag_status} />
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Flagged {flag.weeks_flagged} week(s)</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Flagged {flag.weeks_flagged} week(s)</span>
                 </div>
 
                 {/* Triggered dimensions */}
@@ -272,7 +272,7 @@ const SlideOver: React.FC<{
                           display: 'flex', alignItems: 'center', gap: 10,
                           padding: '8px 0', borderBottom: '1px solid var(--border-subtle)', fontSize: 13,
                         }}>
-                          <span style={{ width: 70, color: 'var(--text-muted)', textTransform: 'capitalize' }}>{dim}</span>
+                          <span style={{ width: 70, color: 'var(--text-3)', textTransform: 'capitalize' }}>{dim}</span>
                           <span className={`risk-badge risk-${status === 'risk' ? 'high' : status === 'attention' ? 'medium' : 'watch'}`} style={{ fontSize: 10 }}>
                             {status || 'ok'}
                           </span>
@@ -283,7 +283,7 @@ const SlideOver: React.FC<{
                               background: status === 'risk' ? '#f97316' : status === 'attention' ? '#f59e0b' : '#22d3a0',
                             }} />
                           </div>
-                          <span style={{ fontSize: 12, color: 'var(--text-muted)', width: 30, textAlign: 'right' }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)', width: 30, textAlign: 'right' }}>
                             {score?.toFixed(1) ?? '—'}
                           </span>
                         </div>
@@ -299,8 +299,8 @@ const SlideOver: React.FC<{
                     <ResponsiveContainer width="100%" height={130}>
                       <LineChart data={report.checkin_trend}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                        <XAxis dataKey="week_start" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
-                        <YAxis domain={[0, 10]} tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} width={20} />
+                        <XAxis dataKey="week_start" tick={{ fontSize: 9, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
+                        <YAxis domain={[0, 10]} tick={{ fontSize: 9, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} width={20} />
                         <Tooltip />
                         <Line dataKey="academic_score" stroke="#7c6ff7" strokeWidth={2} dot={{ r: 3 }} name="Academic" />
                         <Line dataKey="emotional_score" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} name="Emotional" />
@@ -320,7 +320,7 @@ const SlideOver: React.FC<{
                         padding: '6px 0', borderBottom: '1px solid var(--border-subtle)', fontSize: 12,
                       }}>
                         <RiskBadge level={fh.risk_level} />
-                        <span style={{ color: 'var(--text-muted)' }}>{fh.weeks_flagged}w · {formatDate(fh.created_at)}</span>
+                        <span style={{ color: 'var(--text-3)' }}>{fh.weeks_flagged}w · {formatDate(fh.created_at)}</span>
                         <StatusBadge status={fh.status} />
                       </div>
                     ))}
@@ -376,7 +376,7 @@ export const StudentsPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>At-Risk Students</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+          <p style={{ color: 'var(--text-3)', fontSize: 13 }}>
             {flags.length} student{flags.length !== 1 ? 's' : ''} flagged · sorted by priority
           </p>
         </div>
@@ -409,13 +409,13 @@ export const StudentsPage: React.FC = () => {
       {/* Table */}
       <div className="mgr-table-wrap">
         {isLoading
-          ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted)' }}>Loading…</div>
+          ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>Loading…</div>
           : flags.length === 0
             ? (
               <div style={{ padding: 48, textAlign: 'center' }}>
                 <CheckCircle size={36} style={{ color: '#22d3a0', margin: '0 auto 12px' }} />
                 <p style={{ fontWeight: 600, marginBottom: 4 }}>No students flagged</p>
-                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>All clear for the current filters.</p>
+                <p style={{ fontSize: 13, color: 'var(--text-3)' }}>All clear for the current filters.</p>
               </div>
             )
             : (
@@ -438,17 +438,17 @@ export const StudentsPage: React.FC = () => {
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <div style={{
-                            width: 28, height: 28, borderRadius: '50%', background: 'var(--accent-light)',
+                            width: 28, height: 28, borderRadius: '50%', background: 'var(--sage-light)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0,
+                            fontSize: 11, fontWeight: 700, color: 'var(--sage)', flexShrink: 0,
                           }}>
                             {f.student_name.charAt(0)}
                           </div>
                           <span style={{ fontWeight: 500 }}>{f.student_name}</span>
                         </div>
                       </td>
-                      <td style={{ color: 'var(--text-muted)' }}>{f.branch || '—'} / {f.batch || '—'}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>{f.semester || '—'}</td>
+                      <td style={{ color: 'var(--text-3)' }}>{f.branch || '—'} / {f.batch || '—'}</td>
+                      <td style={{ color: 'var(--text-3)' }}>{f.semester || '—'}</td>
                       <td><RiskBadge level={f.risk_level} /></td>
                       <td>
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -457,7 +457,7 @@ export const StudentsPage: React.FC = () => {
                       </td>
                       <td style={{ fontWeight: 600 }}>{f.weeks_flagged}</td>
                       <td><StatusBadge status={f.assignment_status || f.flag_status} /></td>
-                      <td style={{ color: 'var(--text-muted)' }}>{formatDate(f.last_checkin_date)}</td>
+                      <td style={{ color: 'var(--text-3)' }}>{formatDate(f.last_checkin_date)}</td>
                     </tr>
                   ))}
                 </tbody>

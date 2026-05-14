@@ -13,7 +13,7 @@ export const UnauthorizedPage: React.FC = () => {
     <div style={{ padding: 32, textAlign: 'center', color: 'var(--text)' }}>
       <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
       <h1 style={{ fontSize: 22, marginBottom: 8 }}>Access Denied</h1>
-      <p style={{ color: 'var(--text-muted)', marginBottom: 24 }}>You don't have permission to view this page.</p>
+      <p style={{ color: 'var(--text-3)', marginBottom: 24 }}>You don't have permission to view this page.</p>
       <button onClick={() => { logout(); navigate('/login'); }} className="btn btn-primary">
         Go back to Login
       </button>

@@ -24,7 +24,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       background: 'var(--surface-raised)', border: '1px solid var(--border)',
       borderRadius: 8, padding: '8px 12px', fontSize: 12,
     }}>
-      <p style={{ color: 'var(--text-muted)', marginBottom: 4 }}>{label}</p>
+      <p style={{ color: 'var(--text-3)', marginBottom: 4 }}>{label}</p>
       {payload.map((p: any) => (
         <p key={p.dataKey} style={{ color: p.color || p.fill, fontWeight: 600 }}>
           {p.name}: {p.value}{p.unit || ''}
@@ -39,9 +39,9 @@ const StatBox: React.FC<{ label: string; value: string | number; sub?: string; c
     background: 'var(--surface)', border: '1px solid var(--border)',
     borderRadius: 'var(--radius-lg)', padding: '18px 20px',
   }}>
-    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>{label}</div>
+    <div style={{ fontSize: 11, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>{label}</div>
     <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-1px', color: color || 'var(--text)' }}>{value}</div>
-    {sub && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{sub}</div>}
+    {sub && <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>{sub}</div>}
   </div>
 );
 
@@ -59,7 +59,7 @@ export const ReportsPage: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }} className="no-print">
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Semester Report</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Aggregate data for the last 12 weeks</p>
+          <p style={{ color: 'var(--text-3)', fontSize: 13 }}>Aggregate data for the last 12 weeks</p>
         </div>
         <button className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={handlePrint}>
           <Printer size={15} /> Export / Print
@@ -91,7 +91,7 @@ export const ReportsPage: React.FC = () => {
                     : `${Math.round(report.avg_time_to_first_contact_hours / 24)}d`
                   : '—'}
                 sub="from assignment to first contact"
-                color="var(--accent)"
+                color="var(--sage)"
               />
               <StatBox label="Resolution Rate" value={`${report.resolution_rate}%`} sub="of closed cases" color="#22d3a0" />
               <StatBox
@@ -113,9 +113,9 @@ export const ReportsPage: React.FC = () => {
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={report.flag_trend} barSize={16}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false}
+                    <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
                       tickFormatter={w => w.slice(5)} />
-                    <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} width={24} />
+                    <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} width={24} />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="count" name="Flags" fill="#f97316" radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -126,7 +126,7 @@ export const ReportsPage: React.FC = () => {
               <div className="mgr-chart-wrap">
                 <div className="mgr-chart-title">🎯 Flags by Dimension</div>
                 {dimensionData.length === 0
-                  ? <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: 20 }}>No flag data yet.</p>
+                  ? <p style={{ fontSize: 13, color: 'var(--text-3)', padding: 20 }}>No flag data yet.</p>
                   : (
                     <ResponsiveContainer width="100%" height={200}>
                       <PieChart>
@@ -148,9 +148,9 @@ export const ReportsPage: React.FC = () => {
               <ResponsiveContainer width="100%" height={180}>
                 <LineChart data={report.weekly_engagement}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false}
+                  <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
                     tickFormatter={w => w.slice(5)} />
-                  <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} tickLine={false} axisLine={false}
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
                     width={34} unit="%" />
                   <Tooltip content={<CustomTooltip />} />
                   <Line dataKey="rate" name="Check-in Rate" stroke="#22d3a0" strokeWidth={2.5}
@@ -179,7 +179,7 @@ export const ReportsPage: React.FC = () => {
                         <tr key={d.name} onClick={() => {}}>
                           <td style={{ textTransform: 'capitalize', fontWeight: 500 }}>{d.name}</td>
                           <td style={{ fontWeight: 700 }}>{d.value}</td>
-                          <td style={{ color: 'var(--text-muted)' }}>{pct}%</td>
+                          <td style={{ color: 'var(--text-3)' }}>{pct}%</td>
                           <td>
                             <div style={{ background: 'var(--border)', height: 6, borderRadius: 99, width: 120 }}>
                               <div style={{ height: '100%', borderRadius: 99, width: `${pct}%`, background: COLORS[i % COLORS.length] }} />
