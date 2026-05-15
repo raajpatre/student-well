@@ -23,14 +23,6 @@ interface StudentReport {
   manager_note: string | null;
 }
 
-/** Map dimension label → material icon name */
-const dimensionIconMap: Record<string, string> = {
-  academic: 'menu_book',
-  emotional: 'favorite',
-  social: 'groups',
-  sleep: 'bedtime',
-};
-
 /** Status wellness badge classes */
 function snapBadgeClasses(status: string | null): string {
   if (status === 'risk') return 'bg-secondary-container/20 text-secondary';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -10,13 +10,8 @@ const navItems = [
 export const CounsellorLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  // sidebarOpen state kept for API compatibility though unused in mobile-first layout
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   const initials = user?.full_name
     ? user.full_name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
@@ -53,10 +48,14 @@ export const CounsellorLayout: React.FC<{ children: React.ReactNode }> = ({ chil
                 notifications
               </span>
             </button>
-            {/* Counsellor avatar */}
-            <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center border-2 border-surface-container-highest">
+            {/* Counsellor avatar with logout */}
+            <button
+              onClick={handleLogout}
+              className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center border-2 border-surface-container-highest hover:opacity-80 transition-opacity"
+              aria-label="Sign out"
+            >
               <span className="text-on-primary-container font-body-sm text-[13px] font-medium">{initials}</span>
-            </div>
+            </button>
           </div>
         </div>
       </header>
@@ -72,7 +71,6 @@ export const CounsellorLayout: React.FC<{ children: React.ReactNode }> = ({ chil
           <NavLink
             key={to}
             to={to}
-            onClick={() => setSidebarOpen(false)}
             className="flex flex-col items-center justify-center"
           >
             {({ isActive }) => (
