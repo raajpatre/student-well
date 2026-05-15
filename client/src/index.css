@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* StudentWell design tokens */
   --bg: #FAF8F5;
@@ -1054,3 +1058,13 @@ h1, h2, h3, h4 {
 @media (max-width: 480px) {
   .mgr-stats-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* =====================
+   STITCH DESIGN UTILITIES
+   ===================== */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.glass-header { background: rgba(250,249,247,0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.glass-bottom { background: rgba(255,255,255,0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.quote-gradient { background: linear-gradient(90deg, #7c9e8f 0%, #d4956a 100%); }
+.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; user-select: none; }

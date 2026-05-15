@@ -1,6 +1,5 @@
 import React from 'react';
 import { useApi } from '../../hooks/useApi';
-import { Flame, Calendar } from 'lucide-react';
 
 interface TrendsData {
   checkin_history: {
@@ -12,23 +11,17 @@ interface TrendsData {
   streak: number;
 }
 
-const SCORE_COLORS: Record<number, string> = {
-  1: '#f97316',
-  2: '#f59e0b',
-  3: '#6b7280',
-  4: '#22d3a0',
-  5: '#7c6ff7',
-};
-
 const DIMS = [
-  { key: 'emotional_score' as const, label: 'Emotional', emoji: '💙' },
-  { key: 'sleep_score' as const, label: 'Rest', emoji: '🌙' },
-  { key: 'social_score' as const, label: 'Social', emoji: '🤝' },
+  { key: 'emotional_score' as const, label: 'Mood' },
+  { key: 'sleep_score' as const, label: 'Sleep' },
+  { key: 'social_score' as const, label: 'Social' },
 ];
 
-function scoreColor(val: number | null): string {
-  if (val === null) return 'var(--surface-raised)';
-  return SCORE_COLORS[Math.round(val)] || 'var(--surface-raised)';
+function getDotColor(val: number | null): string {
+  if (val === null) return 'bg-surface-container-high';
+  if (val >= 4) return 'bg-primary-container';
+  if (val === 3) return 'bg-tertiary-container';
+  return 'bg-surface-container-high';
 }
 
 function getLast12Weeks(): string[] {
@@ -54,137 +47,128 @@ export const TrendsPage: React.FC = () => {
     (data?.checkin_history || []).map((h) => [h.week_start.split('T')[0], h])
   );
 
+  const streak = data?.streak ?? 0;
+
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div className="flex flex-col gap-xl pb-8">
+      {/* Page header */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Your Trends</h1>
-        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>12-week view of your wellbeing</p>
+        <h1 className="text-headline-md text-on-surface mb-1">My Trends</h1>
+        <p className="text-[14px] text-outline">12-week view of your wellbeing</p>
       </div>
 
-      {/* Streak */}
+      {/* Section 1: Streak */}
       {!isLoading && (
-        <div className="card" style={{
-          background: 'linear-gradient(135deg, rgba(124,111,247,0.15), rgba(34,211,160,0.08))',
-          borderColor: 'var(--border-focus)',
-          display: 'flex', alignItems: 'center', gap: 16
-        }}>
-          <div style={{ fontSize: 36 }}><Flame size={36} style={{ color: 'var(--warning)' }} /></div>
-          <div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>
-              {data?.streak ?? 0}
+        <section>
+          <div className="bg-surface-container-lowest rounded-[18px] shadow-warm p-gutter flex items-center justify-between">
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="font-serif-display text-[48px] leading-none text-primary">{streak}</span>
+                <span className="text-2xl">🔥</span>
+              </div>
+              <span className="font-body-sm text-on-surface-variant mt-1">week streak</span>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 3 }}>
-              week{(data?.streak ?? 0) === 1 ? '' : 's'} in a row
+            <div className="flex gap-2 flex-wrap justify-end max-w-[160px]">
+              {Array.from({ length: 8 }, (_, i) => (
+                <div
+                  key={i}
+                  className={`w-3 h-3 rounded-full ${i >= 8 - streak ? 'bg-primary-container' : 'bg-surface-container-high'}`}
+                />
+              ))}
             </div>
           </div>
-          <div style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--text-3)' }}>
-            Engagement streak
-          </div>
-        </div>
+        </section>
       )}
 
-      {/* 12-Week Heatmap */}
-      <div>
-        <div className="section-header">
-          <span className="section-title">Check-in Heatmap</span>
-          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-            <Calendar size={12} style={{ display: 'inline', marginRight: 4 }} />
-            Last 12 weeks
-          </span>
-        </div>
-
+      {/* Section 2: Check-in History Heatmap */}
+      <section className="space-y-4">
+        <h2 className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">
+          HOW YOU'VE BEEN
+        </h2>
         {isLoading ? (
-          <div className="skeleton" style={{ height: 160, borderRadius: 'var(--radius-lg)' }} />
+          <div className="bg-surface-container-lowest rounded-[16px] shadow-warm p-gutter h-[160px] animate-pulse" />
         ) : (
-          <div className="card" style={{ padding: 16, overflowX: 'auto' }}>
-            {/* Week labels */}
-            <div style={{ display: 'grid', gridTemplateColumns: `80px repeat(12, 1fr)`, gap: 4, marginBottom: 8 }}>
-              <div />
-              {weeks.map((w) => (
-                <div key={w} style={{ fontSize: 9, color: 'var(--text-3)', textAlign: 'center' }}>
-                  {new Date(w).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
-                </div>
-              ))}
+          <div className="bg-surface-container-lowest rounded-[16px] shadow-warm p-gutter overflow-x-auto no-scrollbar">
+            <div style={{ minWidth: '400px' }}>
+              {/* Week Labels */}
+              <div className="grid gap-2 mb-4 text-[10px] text-on-surface-variant text-center" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
+                <div />
+                {weeks.map((_, i) => (
+                  <div key={i} className={i === 11 ? 'font-bold text-primary' : ''}>{i + 1}</div>
+                ))}
+              </div>
+
+              {/* Grid Rows */}
+              <div className="space-y-3">
+                {DIMS.map(({ key, label }) => (
+                  <div
+                    key={key}
+                    className="grid gap-2 items-center"
+                    style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}
+                  >
+                    <span className="text-[10px] text-on-surface-variant text-right pr-2">{label}</span>
+                    {weeks.map((w, i) => {
+                      const entry = historyMap.get(w);
+                      const val = entry?.[key] ?? null;
+                      const isLast = i === 11;
+                      return (
+                        <div
+                          key={w}
+                          title={val !== null ? `Score: ${val}` : 'No check-in'}
+                          className={`w-5 h-5 rounded-full mx-auto ${getDotColor(val)} ${isLast ? 'ring-2 ring-primary-container ring-offset-2 ring-offset-surface-container-lowest' : ''}`}
+                        />
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Rows */}
-            {DIMS.map(({ key, label, emoji }) => (
-              <div
-                key={key}
-                style={{ display: 'grid', gridTemplateColumns: `80px repeat(12, 1fr)`, gap: 4, marginBottom: 6 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-3)' }}>
-                  <span>{emoji}</span>
-                  <span>{label}</span>
-                </div>
-                {weeks.map((w) => {
-                  const entry = historyMap.get(w);
-                  const val = entry?.[key] ?? null;
-                  return (
-                    <div
-                      key={w}
-                      title={val !== null ? `Score: ${val}` : 'No check-in'}
-                      style={{
-                        height: 28, borderRadius: 6,
-                        background: scoreColor(val),
-                        opacity: val === null ? 0.25 : 0.85,
-                        transition: 'transform 0.15s',
-                        cursor: val !== null ? 'pointer' : 'default',
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-
             {/* Legend */}
-            <div style={{ display: 'flex', gap: 12, marginTop: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-              {[
-                { label: 'Low', color: '#f97316' },
-                { label: 'Okay', color: '#6b7280' },
-                { label: 'Good', color: '#22d3a0' },
-                { label: 'Great', color: '#7c6ff7' },
-              ].map(({ label, color }) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: 3, background: color }} />
-                  <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{label}</span>
-                </div>
-              ))}
+            <div className="mt-6 flex items-center justify-center gap-4 text-[11px] text-on-surface-variant flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-primary-container" />Good
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-tertiary-container" />Okay
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-surface-container-high" />Low/Missed
+              </div>
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Score trend bars */}
-      <div>
-        <div className="section-header">
-          <span className="section-title">Last 4 Weeks</span>
-        </div>
-        <div className="card" style={{ padding: 16 }}>
+      {/* Section 3: Last 4 Weeks Bars */}
+      <section className="space-y-4">
+        <h2 className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">
+          LAST 4 WEEKS
+        </h2>
+        <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-warm">
           {isLoading ? (
-            <div className="skeleton" style={{ height: 100 }} />
+            <div className="h-[100px] animate-pulse bg-surface-container-high rounded" />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {DIMS.map(({ key, label, emoji }) => {
+            <div className="flex flex-col gap-4">
+              {DIMS.map(({ key, label }) => {
                 const last4 = weeks.slice(-4).map((w) => historyMap.get(w)?.[key] ?? null);
                 return (
                   <div key={key}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 13 }}>
-                      <span>{emoji}</span>
-                      <span style={{ color: 'var(--text-2)' }}>{label}</span>
+                    <div className="flex items-center gap-2 mb-2 text-[13px] text-on-surface-variant">
+                      <span className="font-medium">{label}</span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 48 }}>
+                    <div className="flex gap-2 items-end h-12">
                       {last4.map((val, i) => (
-                        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                          <div style={{
-                            width: '100%', height: val !== null ? `${(val / 5) * 44}px` : '6px',
-                            background: scoreColor(val),
-                            borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
-                            opacity: val !== null ? 0.85 : 0.2,
-                            transition: 'height 0.5s ease',
-                            minHeight: 6,
-                          }} />
-                          <span style={{ fontSize: 10, color: 'var(--text-3)' }}>W{i + 1}</span>
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                          <div
+                            className={`w-full rounded-t-lg transition-all duration-500 ${getDotColor(val)}`}
+                            style={{
+                              height: val !== null ? `${(val / 5) * 44}px` : '6px',
+                              minHeight: '6px',
+                              opacity: val !== null ? 0.85 : 0.2,
+                            }}
+                          />
+                          <span className="text-[10px] text-outline">W{i + 1}</span>
                         </div>
                       ))}
                     </div>
@@ -194,12 +178,25 @@ export const TrendsPage: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </section>
+
+      {/* Privacy note */}
+      <section>
+        <div className="bg-surface-container-low rounded-[12px] p-4 flex gap-3 items-start border border-surface-container">
+          <span className="material-symbols-outlined text-outline text-[20px]">info</span>
+          <div className="flex-1">
+            <p className="text-[12px] text-on-surface-variant leading-relaxed">This data is yours. Only you can see your trends.</p>
+            <a href="/student/privacy" className="text-[12px] text-primary mt-1 inline-flex items-center gap-1 font-medium hover:opacity-80 transition-opacity">
+              Manage privacy <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+            </a>
+          </div>
+        </div>
+      </section>
 
       {!isLoading && (!data?.checkin_history || data.checkin_history.length === 0) && (
-        <div className="empty-state">
-          <span style={{ fontSize: 40 }}>📊</span>
-          <p>Complete your first check-in to start seeing trends here.</p>
+        <div className="flex flex-col items-center gap-4 py-12 text-center">
+          <span className="text-[40px]">📊</span>
+          <p className="text-on-surface-variant">Complete your first check-in to start seeing trends here.</p>
         </div>
       )}
     </div>

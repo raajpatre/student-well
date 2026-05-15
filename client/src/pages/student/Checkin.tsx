@@ -1,41 +1,40 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiCall } from '../../lib/api';
-import { ChevronLeft } from 'lucide-react';
 
 const QUESTIONS = [
   {
     id: 'emotional_score',
     dimension: 'Emotional',
-    emoji: '💙',
+    stepLabel: 'How you\'re feeling',
     text: 'How have you been feeling emotionally this week?',
   },
   {
     id: 'sleep_score',
     dimension: 'Rest',
-    emoji: '🌙',
+    stepLabel: 'Your rest',
     text: 'How would you rate your sleep and rest this week?',
   },
   {
     id: 'academic_score',
     dimension: 'Academic',
-    emoji: '📚',
+    stepLabel: 'Your studies',
     text: 'How are you feeling about your studies and workload?',
   },
   {
     id: 'social_score',
     dimension: 'Social',
-    emoji: '🤝',
+    stepLabel: 'Your connections',
     text: 'How connected do you feel with the people around you?',
   },
 ];
 
 const EMOJI_SCALE = [
-  { value: 1, emoji: '😔', label: 'Very low' },
+  { value: 1, emoji: '😔', label: 'Not great' },
   { value: 2, emoji: '😕', label: 'Low' },
   { value: 3, emoji: '😐', label: 'Okay' },
   { value: 4, emoji: '🙂', label: 'Good' },
-  { value: 5, emoji: '😊', label: 'Great' },
+  { value: 5, emoji: '😊', label: 'Really good' },
 ];
 
 type Answers = Record<string, number>;
@@ -51,7 +50,6 @@ export const CheckinPage: React.FC = () => {
 
   const question = QUESTIONS[step];
   const isLast = step === QUESTIONS.length - 1;
-  const progress = ((step) / QUESTIONS.length) * 100;
 
   const handleSelect = (val: number) => setSelected(val);
 
@@ -80,16 +78,16 @@ export const CheckinPage: React.FC = () => {
 
   if (isDone) {
     return (
-      <div className="fade-in" style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', minHeight: 'calc(100svh - 130px)', gap: 20, textAlign: 'center'
-      }}>
-        <div style={{ fontSize: 64 }}>🌟</div>
-        <h2 style={{ fontSize: 22, fontWeight: 700 }}>Check-in complete!</h2>
-        <p style={{ color: 'var(--text-3)', fontSize: 15, maxWidth: 280, lineHeight: 1.6 }}>
+      <div className="flex flex-col items-center justify-center min-h-[calc(100svh-130px)] gap-6 text-center px-container-padding pb-8">
+        <div className="text-[64px]">🌟</div>
+        <h2 className="text-headline-md text-on-surface">Check-in complete!</h2>
+        <p className="text-[15px] text-on-surface-variant max-w-[280px] leading-relaxed">
           Thank you for taking a moment for yourself. Your wellbeing snapshot has been updated.
         </p>
-        <button className="btn btn-primary" onClick={() => navigate('/student/dashboard')}>
+        <button
+          className="h-[48px] px-8 bg-primary-container text-on-primary rounded-btn font-body-md hover:bg-primary transition-colors shadow-sm"
+          onClick={() => navigate('/student/dashboard')}
+        >
           Back to Home
         </button>
       </div>
@@ -97,89 +95,96 @@ export const CheckinPage: React.FC = () => {
   }
 
   return (
-    <div className="fade-in" style={{ minHeight: 'calc(100svh - 130px)', display: 'flex', flexDirection: 'column' }}>
+    <div className="flex flex-col min-h-[calc(100svh-130px)] px-0 pb-8">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/student/dashboard')}
-          style={{ padding: '8px', borderRadius: '50%' }}>
-          <ChevronLeft size={20} />
+      <div className="flex items-center justify-between mb-lg">
+        <button
+          className="text-on-surface-variant hover:opacity-80 transition-opacity"
+          onClick={() => navigate('/student/dashboard')}
+        >
+          <span className="material-symbols-outlined">arrow_back</span>
         </button>
-        <span style={{ fontSize: 14, color: 'var(--text-3)' }}>Weekly Check-in</span>
+        <h1 className="font-body-sm text-body-sm text-on-surface">Check-in</h1>
+        <button
+          className="text-on-surface-variant hover:opacity-80 transition-opacity"
+          onClick={() => navigate('/student/dashboard')}
+        >
+          <span className="material-symbols-outlined">close</span>
+        </button>
       </div>
 
-      {/* Progress bar */}
-      <div style={{ marginBottom: 40 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-          {QUESTIONS.map((q, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: i < step ? 'var(--good)' : i === step ? 'var(--sage)' : 'var(--surface-raised)',
-                border: i === step ? '2px solid var(--sage)' : '2px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 16, transition: 'all 0.3s',
-                color: i <= step ? '#fff' : 'var(--text-3)'
-              }}>
-                {i < step ? '✓' : q.emoji}
-              </div>
-              <span style={{ fontSize: 10, color: i === step ? 'var(--sage)' : 'var(--text-3)' }}>
-                {q.dimension}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div style={{ height: 3, background: 'var(--surface-raised)', borderRadius: 99, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', background: 'var(--sage)', borderRadius: 99,
-            width: `${progress}%`, transition: 'width 0.5s ease'
-          }} />
-        </div>
+      {/* Progress Bar */}
+      <div className="w-full h-1 bg-surface-container-high rounded-full overflow-hidden flex gap-1 mb-xl">
+        {QUESTIONS.map((_, i) => (
+          <div
+            key={i}
+            className={`h-full rounded-full flex-1 transition-colors duration-300 ${
+              i <= step ? 'bg-primary-container' : 'bg-surface-container-high'
+            }`}
+          />
+        ))}
       </div>
 
-      {/* Question */}
-      <div key={step} className="fade-in" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 32 }}>
-        <div>
-          <div style={{ fontSize: 42, marginBottom: 16 }}>{question.emoji}</div>
-          <h2 style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.4 }}>{question.text}</h2>
+      {/* Question Block */}
+      <div key={step} className="flex-grow flex flex-col items-center justify-center space-y-xl pb-32">
+        <div className="flex flex-col items-center text-center space-y-md">
+          <span className="inline-flex items-center justify-center px-3 py-1 bg-primary-fixed text-on-primary-container rounded-full text-[11px] font-medium uppercase tracking-wider">
+            {question.stepLabel}
+          </span>
+          <h2 className="font-serif-display italic text-[22px] leading-tight text-on-tertiary-container max-w-[280px]">
+            {question.text}
+          </h2>
+          <p className="font-body-sm text-[13px] text-on-surface-variant max-w-[250px]">
+            No right answer. Be honest with yourself.
+          </p>
         </div>
 
-        {/* Emoji Scale */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-          {EMOJI_SCALE.map(({ value, emoji, label }) => (
-            <button
-              key={value}
-              onClick={() => handleSelect(value)}
-              style={{
-                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: 6, padding: '14px 4px', borderRadius: 'var(--radius-md)',
-                border: selected === value ? '2px solid var(--sage)' : '2px solid var(--border)',
-                background: selected === value ? 'var(--sage-light)' : 'var(--surface)',
-                cursor: 'pointer', transition: 'all 0.2s',
-                transform: selected === value ? 'scale(1.08)' : 'scale(1)',
-              }}
-            >
-              <span style={{ fontSize: 26 }}>{emoji}</span>
-              <span style={{ fontSize: 10, color: selected === value ? 'var(--sage)' : 'var(--text-3)', fontWeight: 500 }}>
-                {label}
-              </span>
-            </button>
-          ))}
+        {/* Emoji Selection */}
+        <div className="w-full max-w-[320px] pt-md">
+          <div className="flex justify-between items-center w-full mb-xs">
+            {EMOJI_SCALE.map(({ value, emoji }) => (
+              <button
+                key={value}
+                onClick={() => handleSelect(value)}
+                className={`w-[52px] h-[52px] rounded-full flex items-center justify-center text-2xl border shadow-warm transition-all duration-200 hover:-translate-y-1 ${
+                  selected === value
+                    ? 'bg-primary-container border-2 border-primary scale-110 z-10'
+                    : 'bg-surface-container-lowest border-transparent'
+                }`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-between w-full px-2 text-[10px] text-on-surface-variant font-medium tracking-wide">
+            <span>Not great</span>
+            <span>Really good</span>
+          </div>
         </div>
 
         {error && (
-          <div className="banner banner-attention">
-            <p style={{ fontSize: 14 }}>{error}</p>
+          <div className="bg-error-container text-on-error-container rounded-input px-4 py-3 text-[13px] w-full max-w-[320px]">
+            {error}
           </div>
         )}
+      </div>
 
+      {/* Bottom Actions */}
+      <div className="fixed bottom-0 left-0 w-full px-container-padding pb-lg pt-md bg-gradient-to-t from-background via-background to-transparent flex flex-col items-center">
         <button
-          className="btn btn-primary btn-full"
+          className="w-full h-[48px] bg-primary-container text-on-primary-container rounded-xl font-body-sm text-body-sm flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50"
           onClick={handleNext}
           disabled={selected === null || isSubmitting}
-          style={{ opacity: selected === null ? 0.5 : 1, marginTop: 'auto' }}
         >
-          {isSubmitting ? 'Saving...' : isLast ? 'Complete Check-in' : 'Next →'}
+          {isSubmitting ? 'Saving...' : isLast ? 'Complete Check-in' : 'Next'}
+          {!isSubmitting && (
+            <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+          )}
         </button>
+        <div className="flex items-center gap-1 mt-md text-on-surface-variant opacity-80">
+          <span className="material-symbols-outlined text-[14px]">lock</span>
+          <span className="text-[12px]">This stays private to you.</span>
+        </div>
       </div>
     </div>
   );

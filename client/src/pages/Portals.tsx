@@ -10,13 +10,20 @@ export const UnauthorizedPage: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   return (
-    <div style={{ padding: 32, textAlign: 'center', color: 'var(--text)' }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-      <h1 style={{ fontSize: 22, marginBottom: 8 }}>Access Denied</h1>
-      <p style={{ color: 'var(--text-3)', marginBottom: 24 }}>You don't have permission to view this page.</p>
-      <button onClick={() => { logout(); navigate('/login'); }} className="btn btn-primary">
-        Go back to Login
-      </button>
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="bg-surface-container-lowest rounded-card shadow-warm p-lg text-center max-w-sm w-full">
+        <div className="w-16 h-16 rounded-full bg-error-container flex items-center justify-center mx-auto mb-4">
+          <span className="material-symbols-outlined text-on-error-container text-[32px]">lock</span>
+        </div>
+        <h1 className="text-headline-md text-on-surface mb-2">Access Denied</h1>
+        <p className="text-[14px] text-outline mb-6">You don't have permission to view this page.</p>
+        <button
+          onClick={() => { logout(); navigate('/login'); }}
+          className="w-full h-[48px] bg-primary-container text-on-primary rounded-btn font-body-md hover:bg-primary transition-colors shadow-sm"
+        >
+          Go back to Login
+        </button>
+      </div>
     </div>
   );
 };

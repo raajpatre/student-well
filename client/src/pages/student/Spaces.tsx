@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { apiCall } from '../../lib/api';
-import { Users, ToggleLeft, ToggleRight, Flag, Plus, X } from 'lucide-react';
 
 interface Space {
   id: string;
@@ -65,92 +64,104 @@ export const SpacesPage: React.FC = () => {
 
   if (activeSpace) {
     return (
-      <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="flex flex-col gap-4 pb-8">
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => setActiveSpace(null)}
-            style={{ padding: 8, borderRadius: '50%' }}>
-            <X size={20} />
+        <div className="flex items-center gap-3">
+          <button
+            className="text-on-surface-variant hover:opacity-80 transition-opacity"
+            onClick={() => setActiveSpace(null)}
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
           </button>
-          <div style={{ flex: 1 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 700 }}>{activeSpace.name}</h2>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[17px] font-medium text-on-surface truncate">{activeSpace.name}</h2>
+            <div className="flex gap-1.5 flex-wrap mt-1">
               {activeSpace.tags.map((t) => (
-                <span key={t} className="badge badge-accent" style={{ fontSize: 11 }}>{t}</span>
+                <span key={t} className="bg-primary-fixed text-on-primary-container rounded-full px-3 py-0.5 text-[11px] font-medium">
+                  {t}
+                </span>
               ))}
             </div>
           </div>
           <button
             onClick={() => setStudyToggle((v) => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: studyToggle ? 'var(--good)' : 'var(--text-3)', fontSize: 12, fontWeight: 500 }}
+            className="flex items-center gap-1.5 text-[12px] font-medium"
+            style={{ color: studyToggle ? '#7c9e8f' : '#727974', background: 'none', border: 'none' }}
           >
-            {studyToggle ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
-            Study Together
+            <div
+              className={`relative inline-flex h-5 w-9 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${studyToggle ? 'bg-primary-container' : 'bg-surface-variant'}`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${studyToggle ? 'translate-x-4' : 'translate-x-0'}`}
+              />
+            </div>
+            Study
           </button>
         </div>
 
         {/* Post input */}
-        <div className="card" style={{ padding: '12px 14px' }}>
+        <div className="bg-surface-container-lowest rounded-card shadow-warm p-md">
           <textarea
             value={newPost}
             onChange={(e) => setNewPost(e.target.value.slice(0, 500))}
             placeholder="Share something with the space..."
             rows={2}
-            style={{ width: '100%', resize: 'none', border: 'none', background: 'transparent', fontSize: 14, outline: 'none' }}
+            className="w-full resize-none border-none bg-transparent text-[14px] text-on-surface outline-none placeholder:text-outline"
           />
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{newPost.length}/500</span>
-            <button className="btn btn-primary btn-sm" onClick={submitPost} disabled={!newPost.trim() || isPosting}>
-              <Plus size={14} /> Post
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-[12px] text-outline">{newPost.length}/500</span>
+            <button
+              className="flex items-center gap-1 h-8 px-4 bg-primary-container text-on-primary rounded-btn text-[13px] font-medium hover:bg-primary transition-colors disabled:opacity-50"
+              onClick={submitPost}
+              disabled={!newPost.trim() || isPosting}
+            >
+              <span className="material-symbols-outlined text-[14px]">add</span>
+              Post
             </button>
           </div>
         </div>
 
         {/* Posts */}
         {loadingPosts ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 80, borderRadius: 'var(--radius-md)' }} />)}
+          <div className="flex flex-col gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-20 rounded-2xl bg-surface-container-high animate-pulse" />
+            ))}
           </div>
         ) : posts.length === 0 ? (
-          <div className="empty-state">
-            <Users size={36} />
-            <p>No posts yet. Be the first to share something!</p>
+          <div className="flex flex-col items-center gap-4 py-12 text-center">
+            <span className="material-symbols-outlined text-outline text-[36px]">group</span>
+            <p className="text-on-surface-variant">No posts yet. Be the first to share something!</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="flex flex-col gap-3">
             {posts.map((post) => (
-              <div key={post.id} className="card" style={{ padding: '14px 16px', position: 'relative' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 13, fontWeight: 500 }}>{post.author_name || 'Anonymous'}</span>
-                  <div style={{ position: 'relative' }}>
+              <div key={post.id} className="bg-surface-container-lowest rounded-card shadow-warm p-md relative">
+                <div className="flex justify-between mb-2">
+                  <span className="text-[13px] font-medium text-on-surface">{post.author_name || 'Anonymous'}</span>
+                  <div className="relative">
                     <button
-                      className="btn btn-ghost btn-sm"
+                      className="text-outline hover:text-on-surface transition-colors text-lg leading-none px-2"
                       onClick={() => setMenuOpen(menuOpen === post.id ? null : post.id)}
-                      style={{ padding: '4px 8px', fontSize: 18, lineHeight: 1 }}
-                    >⋯</button>
+                    >
+                      ⋯
+                    </button>
                     {menuOpen === post.id && (
-                      <div style={{
-                        position: 'absolute', right: 0, top: 28, background: 'var(--surface-raised)',
-                        border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                        padding: 4, zIndex: 10, minWidth: 130
-                      }}>
+                      <div className="absolute right-0 top-7 bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-warm p-1 z-10 min-w-[130px]">
                         <button
                           onClick={() => flagPost(post.id)}
                           disabled={flaggedPosts.has(post.id)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-                            background: 'none', border: 'none', color: flaggedPosts.has(post.id) ? 'var(--text-3)' : 'var(--warning)',
-                            fontSize: 13, cursor: 'pointer', width: '100%', borderRadius: 4
-                          }}
+                          className="flex items-center gap-2 px-3 py-2 text-[13px] text-tertiary hover:bg-surface-container-low rounded-lg w-full disabled:opacity-50"
                         >
-                          <Flag size={13} /> {flaggedPosts.has(post.id) ? 'Flagged' : 'Flag post'}
+                          <span className="material-symbols-outlined text-[13px]">flag</span>
+                          {flaggedPosts.has(post.id) ? 'Flagged' : 'Flag post'}
                         </button>
                       </div>
                     )}
                   </div>
                 </div>
-                <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text)' }}>{post.content}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 8 }}>
+                <p className="text-[14px] leading-relaxed text-on-surface">{post.content}</p>
+                <p className="text-[11px] text-outline mt-2">
                   {new Date(post.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -162,51 +173,73 @@ export const SpacesPage: React.FC = () => {
   }
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5 pb-8">
+      {/* Header */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Social Spaces</h1>
-        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Connect with people who get it</p>
+        <h1 className="text-headline-md text-on-surface mb-1">Find Your People</h1>
+        <p className="text-[14px] text-outline">Connect with people who get it</p>
       </div>
 
       {isLoading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 110, borderRadius: 'var(--radius-lg)' }} />)}
+        <div className="flex flex-col gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-[120px] rounded-2xl bg-surface-container-high animate-pulse" />
+          ))}
         </div>
       ) : spaces.length === 0 ? (
-        <div className="empty-state">
-          <Users size={36} />
-          <p>No spaces available yet.</p>
-          <p style={{ fontSize: 13 }}>Check back soon — your institution is setting things up.</p>
+        <div className="flex flex-col items-center gap-4 py-16 text-center">
+          <span className="material-symbols-outlined text-outline text-[36px]">group</span>
+          <p className="text-on-surface font-medium">No spaces available yet.</p>
+          <p className="text-[13px] text-outline">Check back soon — your institution is setting things up.</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="flex flex-col gap-4">
           {spaces.map((space) => (
-            <button
+            <div
               key={space.id}
-              className="card"
+              className="bg-surface-container-lowest rounded-card shadow-warm p-md flex flex-col gap-4 cursor-pointer hover:shadow-warm-glow transition-shadow"
               onClick={() => openSpace(space)}
-              style={{ textAlign: 'left', cursor: 'pointer', width: '100%' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 600 }}>{space.name}</h3>
-                <span style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Users size={12} /> {space.member_count}
-                </span>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-[16px] font-medium text-on-surface leading-tight mb-1">{space.name}</h3>
+                  <p className="text-[14px] text-on-surface-variant flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[16px]">group</span>
+                    {space.member_count} members
+                  </p>
+                </div>
               </div>
               {space.description && (
-                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 10, lineHeight: 1.5 }}>
-                  {space.description}
-                </p>
+                <p className="text-[13px] text-on-surface-variant leading-relaxed">{space.description}</p>
               )}
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {space.tags?.map((t) => (
-                  <span key={t} className="badge badge-neutral" style={{ fontSize: 11 }}>{t}</span>
-                ))}
+              {space.tags?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {space.tags.map((t) => (
+                    <span key={t} className="rounded-full bg-surface-container-low px-[10px] py-[4px] text-[12px] font-medium text-on-surface-variant">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="border-t border-outline-variant/20 pt-3 flex items-center justify-end">
+                <button className="text-[14px] font-medium text-primary-container flex items-center gap-1 hover:opacity-80 transition-opacity">
+                  Join space <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </button>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}
+
+      {/* Suggest a space */}
+      <button className="w-full flex items-center justify-center gap-2 py-6 border border-dashed border-outline-variant rounded-2xl bg-transparent hover:bg-surface-container-low transition-colors">
+        <span className="material-symbols-outlined text-primary-container">add</span>
+        <span className="text-[13px] font-medium text-primary-container">Suggest a space</span>
+      </button>
+
+      <p className="text-center text-[12px] text-outline px-4">
+        You see people's study interests, not their wellness data.
+      </p>
     </div>
   );
 };

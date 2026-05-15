@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { apiCall } from '../../lib/api';
-import { X, CheckCircle } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from 'recharts';
@@ -38,13 +37,37 @@ interface Counsellor {
   is_on_leave: boolean;
 }
 
+const riskBadgeClass = (level: string) => {
+  switch (level) {
+    case 'high': return 'bg-error-container text-on-error-container';
+    case 'medium': return 'bg-secondary-container text-on-secondary-container';
+    default: return 'bg-primary-fixed text-on-primary-fixed';
+  }
+};
+
 const RiskBadge = ({ level }: { level: string }) => (
-  <span className={`risk-badge risk-${level}`}>{level.toUpperCase()}</span>
+  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium tracking-wide ${riskBadgeClass(level)}`}>
+    {level === 'high' ? 'High Risk' : level === 'medium' ? 'Medium Risk' : 'Watch'}
+  </span>
 );
 
+const statusBadgeClass = (status: string | null) => {
+  if (!status || status === 'unassigned') return 'bg-tertiary-fixed text-on-tertiary-fixed-variant italic';
+  if (status === 'ongoing') return 'bg-primary-container text-on-primary-container';
+  if (status === 'contacted') return 'bg-primary-fixed text-on-primary-fixed-variant';
+  if (status === 'pending_contact') return 'bg-secondary-fixed text-on-secondary-fixed-variant';
+  return 'bg-surface-container text-on-surface-variant';
+};
+
 const StatusBadge = ({ status }: { status: string | null }) => {
-  if (!status) return <span className="status-badge-sm status-unassigned">Unassigned</span>;
-  return <span className={`status-badge-sm status-${status}`}>{status.replace('_', ' ')}</span>;
+  const label = !status || status === 'unassigned'
+    ? 'Unassigned'
+    : status.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${statusBadgeClass(status)}`}>
+      {label}
+    </span>
+  );
 };
 
 function formatDate(d: string | null) {
@@ -91,37 +114,47 @@ const AssignModal: React.FC<{
   const snap = report.wellness_snapshot;
 
   return (
-    <div className="mgr-modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="mgr-modal">
-        <div className="mgr-modal-header">
+    <div
+      className="fixed inset-0 z-50 bg-inverse-surface/40 flex items-center justify-center p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-surface-container-lowest rounded-2xl shadow-warm-glow w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-lg py-md border-b border-custom-divider flex-shrink-0">
           <div>
-            <h2 style={{ fontSize: 16, fontWeight: 700 }}>Assign Counsellor</h2>
-            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{report.student.full_name}</p>
+            <h2 className="text-[16px] font-medium text-on-surface">Assign Counsellor</h2>
+            <p className="text-[12px] text-on-surface-variant mt-0.5">{report.student.full_name}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}><X size={18} /></button>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-outline hover:bg-surface-container transition-colors">
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
+          </button>
         </div>
 
-        <div className="mgr-modal-body">
+        <div className="flex flex-1 overflow-hidden">
           {/* Left — student summary */}
-          <div className="mgr-modal-left">
-            <div className="mgr-section-title" style={{ marginBottom: 10 }}>Student Summary</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, marginBottom: 16 }}>
-              <div><span style={{ color: 'var(--text-3)' }}>Roll: </span>{report.student.roll_number || '—'}</div>
-              <div><span style={{ color: 'var(--text-3)' }}>Branch: </span>{report.student.branch || '—'} · Batch {report.student.batch || '—'}</div>
-              <div><span style={{ color: 'var(--text-3)' }}>Semester: </span>{report.student.semester || '—'}</div>
+          <div className="flex-1 overflow-y-auto p-lg border-r border-custom-divider">
+            <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-3">Student Summary</p>
+            <div className="flex flex-col gap-1.5 text-[13px] mb-5">
+              <div><span className="text-on-surface-variant">Roll: </span>{report.student.roll_number || '—'}</div>
+              <div><span className="text-on-surface-variant">Branch: </span>{report.student.branch || '—'} · Batch {report.student.batch || '—'}</div>
+              <div><span className="text-on-surface-variant">Semester: </span>{report.student.semester || '—'}</div>
             </div>
 
             {snap && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-                <div className="mgr-section-title">Wellness Snapshot</div>
+              <div className="mb-5">
+                <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-3">Wellness Snapshot</p>
                 {['academic', 'emotional', 'social'].map(dim => (
-                  <div key={dim} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                    <span style={{ width: 65, color: 'var(--text-3)', textTransform: 'capitalize' }}>{dim}</span>
-                    <span className={`risk-badge risk-${(snap as any)[`${dim}_status`] === 'risk' ? 'high' : 'watch'}`} style={{ fontSize: 10 }}>
-                      {(snap as any)[`${dim}_status`] || 'ok'}
-                    </span>
-                    <span style={{ color: 'var(--text-3)', fontSize: 12 }}>
-                      {(snap as any)[`${dim}_score`]?.toFixed(1) ?? '—'}/10
+                  <div key={dim} className="flex items-center gap-2 py-2 border-b border-custom-divider/50 last:border-0 text-[13px]">
+                    <span className="w-16 text-on-surface-variant capitalize">{dim}</span>
+                    <RiskBadge level={(snap as any)[`${dim}_status`] === 'risk' ? 'high' : 'watch'} />
+                    <div className="flex-1 h-1.5 rounded-full bg-outline-variant overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary-container"
+                        style={{ width: `${Math.min(100, ((snap as any)[`${dim}_score`] || 0) * 10)}%` }}
+                      />
+                    </div>
+                    <span className="text-[12px] text-on-surface-variant w-8 text-right">
+                      {(snap as any)[`${dim}_score`]?.toFixed(1) ?? '—'}
                     </span>
                   </div>
                 ))}
@@ -130,72 +163,70 @@ const AssignModal: React.FC<{
 
             {report.checkin_trend.length > 0 && (
               <>
-                <div className="mgr-section-title">4-Week Check-in Trend</div>
+                <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-3">4-Week Check-in Trend</p>
                 <ResponsiveContainer width="100%" height={100}>
                   <LineChart data={report.checkin_trend}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                    <XAxis dataKey="week_start" tick={{ fontSize: 9, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D9" vertical={false} />
+                    <XAxis dataKey="week_start" tick={{ fontSize: 9, fill: '#B0A89E' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
                     <YAxis domain={[0, 10]} hide />
                     <Tooltip />
-                    <Line dataKey="academic_score" stroke="#7c6ff7" strokeWidth={1.5} dot={false} name="Academic" />
-                    <Line dataKey="emotional_score" stroke="#f97316" strokeWidth={1.5} dot={false} name="Emotional" />
-                    <Line dataKey="social_score" stroke="#22d3a0" strokeWidth={1.5} dot={false} name="Social" />
+                    <Line dataKey="academic_score" stroke="#456558" strokeWidth={1.5} dot={false} name="Academic" />
+                    <Line dataKey="emotional_score" stroke="#D4956A" strokeWidth={1.5} dot={false} name="Emotional" />
+                    <Line dataKey="social_score" stroke="#7c9e8f" strokeWidth={1.5} dot={false} name="Social" />
                   </LineChart>
                 </ResponsiveContainer>
               </>
             )}
 
-            <div style={{ marginTop: 16 }}>
-              <div className="mgr-section-title">Manager Note</div>
+            <div className="mt-4">
+              <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-2">Manager Note</p>
               <textarea
                 placeholder="Optional context for the counsellor…"
                 value={note}
                 onChange={e => setNote(e.target.value)}
-                style={{
-                  width: '100%', minHeight: 80,
-                  background: 'var(--surface-raised)', border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-md)', padding: '10px', color: 'var(--text)',
-                  fontSize: 13, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box',
-                }}
+                className="w-full min-h-[70px] bg-surface-container-low border border-outline-variant rounded-input p-3 text-on-surface text-[13px] font-sans resize-y focus:outline-none focus:border-primary transition-colors"
               />
             </div>
           </div>
 
           {/* Right — counsellor list */}
-          <div className="mgr-modal-right">
-            <div className="mgr-section-title">Select Counsellor</div>
+          <div className="w-64 overflow-y-auto p-lg flex-shrink-0">
+            <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-3">Select Counsellor</p>
             {counsellors.length === 0
-              ? <p style={{ fontSize: 13, color: 'var(--text-3)' }}>No counsellors found.</p>
+              ? <p className="text-[13px] text-on-surface-variant">No counsellors found.</p>
               : counsellors.map(c => (
                 <div
                   key={c.id}
-                  className={`counsellor-pick-card${selectedId === c.id ? ' selected' : ''}${c.is_on_leave ? ' on-leave' : ''}`}
                   onClick={() => !c.is_on_leave && setSelectedId(c.id)}
+                  className={`p-3 rounded-xl border mb-2 transition-colors cursor-pointer ${
+                    c.is_on_leave ? 'opacity-50 cursor-not-allowed border-outline-variant' :
+                    selectedId === c.id
+                      ? 'border-primary bg-primary-fixed/30'
+                      : 'border-outline-variant hover:bg-surface-container-low'
+                  }`}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div className="counsellor-pick-name">{c.full_name}</div>
-                    {c.is_on_leave && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>On Leave</span>}
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="text-[13px] font-medium text-on-surface">{c.full_name}</span>
+                    {c.is_on_leave && <span className="text-[10px] text-outline">On Leave</span>}
                   </div>
                   {c.personality_description && (
-                    <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 3, lineHeight: 1.4 }}>
-                      {c.personality_description}
-                    </p>
+                    <p className="text-[12px] text-on-surface-variant mb-2 leading-relaxed line-clamp-2">{c.personality_description}</p>
                   )}
-                  <div style={{ marginTop: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>
-                      <span>Caseload</span>
-                      <span>{c.current_caseload_count} / {c.capacity_limit}</span>
-                    </div>
-                    <div className="counsellor-capacity-bar">
-                      <div className="counsellor-capacity-fill" style={{
-                        width: `${Math.min(100, (c.current_caseload_count / c.capacity_limit) * 100)}%`,
-                        background: c.current_caseload_count >= c.capacity_limit ? '#f97316' : 'var(--sage)',
-                      }} />
-                    </div>
+                  <div className="flex justify-between text-[11px] text-on-surface-variant mb-1">
+                    <span>Caseload</span>
+                    <span>{c.current_caseload_count} / {c.capacity_limit}</span>
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-outline-variant overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${c.current_caseload_count >= c.capacity_limit ? 'bg-outline' : 'bg-primary-container'}`}
+                      style={{ width: `${Math.min(100, (c.current_caseload_count / c.capacity_limit) * 100)}%` }}
+                    />
                   </div>
                   {c.specialisation_tags?.length > 0 && (
-                    <div className="counsellor-pick-tags">
-                      {c.specialisation_tags.map(t => <span key={t} className="tag-chip">{t}</span>)}
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {c.specialisation_tags.map(t => (
+                        <span key={t} className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[10px]">{t}</span>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -204,10 +235,21 @@ const AssignModal: React.FC<{
           </div>
         </div>
 
-        <div className="mgr-modal-footer">
-          {err && <span style={{ fontSize: 12, color: '#f97316', marginRight: 'auto' }}>{err}</span>}
-          <button className="btn btn-ghost" onClick={onClose} disabled={saving}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleAssign} disabled={saving || !selectedId}>
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-lg py-md border-t border-custom-divider flex-shrink-0">
+          {err && <span className="text-[12px] text-on-error-container mr-auto">{err}</span>}
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-4 py-2 rounded-btn border border-outline-variant text-on-surface-variant text-[14px] font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleAssign}
+            disabled={saving || !selectedId}
+            className="px-4 py-2 rounded-btn bg-primary text-on-primary text-[14px] font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
             {saving ? 'Assigning…' : 'Confirm Assignment'}
           </button>
         </div>
@@ -226,66 +268,63 @@ const SlideOver: React.FC<{
 
   return (
     <>
-      <div className="mgr-overlay" onClick={onClose} />
-      <div className="mgr-slideover">
-        <div className="mgr-slideover-header">
+      <div className="fixed inset-0 z-40 bg-inverse-surface/30" onClick={onClose} />
+      <div className="fixed inset-y-0 right-0 z-50 w-[400px] max-w-full bg-surface-container-lowest shadow-warm-glow flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between px-lg py-md border-b border-custom-divider flex-shrink-0">
           <div>
-            <h2 style={{ fontSize: 15, fontWeight: 700 }}>{flag.student_name}</h2>
-            <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>
+            <h2 className="text-[15px] font-medium text-on-surface">{flag.student_name}</h2>
+            <p className="text-[12px] text-on-surface-variant mt-0.5">
               {flag.branch} · Batch {flag.batch} · Sem {flag.semester}
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer' }}>
-            <X size={18} />
+          <button onClick={onClose} className="p-1.5 rounded-lg text-outline hover:bg-surface-container transition-colors">
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
           </button>
         </div>
 
-        <div className="mgr-slideover-body">
+        <div className="flex-1 overflow-y-auto p-lg">
           {isLoading
-            ? [1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: 60, borderRadius: 8, marginBottom: 12 }} />)
+            ? [1, 2, 3].map(i => <div key={i} className="h-14 rounded-xl bg-surface-container animate-pulse mb-3" />)
             : report && (
               <>
                 {/* Flag info */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div className="flex gap-2 mb-5 flex-wrap">
                   <RiskBadge level={flag.risk_level} />
                   <StatusBadge status={flag.assignment_status || flag.flag_status} />
-                  <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Flagged {flag.weeks_flagged} week(s)</span>
+                  <span className="text-[12px] text-on-surface-variant">Flagged {flag.weeks_flagged} week(s)</span>
                 </div>
 
                 {/* Triggered dimensions */}
-                <div style={{ marginBottom: 16 }}>
-                  <div className="mgr-section-title">Triggered Dimensions</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {flag.triggered_dimensions?.map(d => <span key={d} className="tag-chip">{d}</span>)}
+                <div className="mb-5">
+                  <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-2">Triggered Dimensions</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {flag.triggered_dimensions?.map(d => (
+                      <span key={d} className="px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant text-[12px]">{d}</span>
+                    ))}
                   </div>
                 </div>
 
                 {/* Wellness snapshot */}
                 {report.wellness_snapshot && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div className="mgr-section-title">Current Wellness Snapshot</div>
+                  <div className="mb-5">
+                    <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-2">Wellness Snapshot</p>
                     {['academic', 'emotional', 'social'].map(dim => {
                       const status = (report.wellness_snapshot as any)[`${dim}_status`];
                       const score = (report.wellness_snapshot as any)[`${dim}_score`];
                       return (
-                        <div key={dim} style={{
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '8px 0', borderBottom: '1px solid var(--border-subtle)', fontSize: 13,
-                        }}>
-                          <span style={{ width: 70, color: 'var(--text-3)', textTransform: 'capitalize' }}>{dim}</span>
-                          <span className={`risk-badge risk-${status === 'risk' ? 'high' : status === 'attention' ? 'medium' : 'watch'}`} style={{ fontSize: 10 }}>
+                        <div key={dim} className="flex items-center gap-3 py-2 border-b border-custom-divider/50 last:border-0 text-[13px]">
+                          <span className="w-16 text-on-surface-variant capitalize">{dim}</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${riskBadgeClass(status === 'risk' ? 'high' : status === 'attention' ? 'medium' : 'watch')}`}>
                             {status || 'ok'}
                           </span>
-                          <div style={{ flex: 1, background: 'var(--border)', height: 5, borderRadius: 99 }}>
-                            <div style={{
-                              height: '100%', borderRadius: 99,
-                              width: `${Math.min(100, (score || 0) * 10)}%`,
-                              background: status === 'risk' ? '#f97316' : status === 'attention' ? '#f59e0b' : '#22d3a0',
-                            }} />
+                          <div className="flex-1 h-1.5 rounded-full bg-outline-variant overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary-container"
+                              style={{ width: `${Math.min(100, (score || 0) * 10)}%` }}
+                            />
                           </div>
-                          <span style={{ fontSize: 12, color: 'var(--text-3)', width: 30, textAlign: 'right' }}>
-                            {score?.toFixed(1) ?? '—'}
-                          </span>
+                          <span className="text-[12px] text-on-surface-variant w-8 text-right">{score?.toFixed(1) ?? '—'}</span>
                         </div>
                       );
                     })}
@@ -294,17 +333,17 @@ const SlideOver: React.FC<{
 
                 {/* Checkin trend chart */}
                 {report.checkin_trend.length > 0 && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div className="mgr-section-title">4-Week Score Trend</div>
+                  <div className="mb-5">
+                    <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-2">4-Week Score Trend</p>
                     <ResponsiveContainer width="100%" height={130}>
                       <LineChart data={report.checkin_trend}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                        <XAxis dataKey="week_start" tick={{ fontSize: 9, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
-                        <YAxis domain={[0, 10]} tick={{ fontSize: 9, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} width={20} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D9" vertical={false} />
+                        <XAxis dataKey="week_start" tick={{ fontSize: 9, fill: '#B0A89E' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
+                        <YAxis domain={[0, 10]} tick={{ fontSize: 9, fill: '#B0A89E' }} tickLine={false} axisLine={false} width={20} />
                         <Tooltip />
-                        <Line dataKey="academic_score" stroke="#7c6ff7" strokeWidth={2} dot={{ r: 3 }} name="Academic" />
-                        <Line dataKey="emotional_score" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} name="Emotional" />
-                        <Line dataKey="social_score" stroke="#22d3a0" strokeWidth={2} dot={{ r: 3 }} name="Social" />
+                        <Line dataKey="academic_score" stroke="#456558" strokeWidth={2} dot={{ r: 3 }} name="Academic" />
+                        <Line dataKey="emotional_score" stroke="#D4956A" strokeWidth={2} dot={{ r: 3 }} name="Emotional" />
+                        <Line dataKey="social_score" stroke="#7c9e8f" strokeWidth={2} dot={{ r: 3 }} name="Social" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -313,14 +352,11 @@ const SlideOver: React.FC<{
                 {/* Flag history */}
                 {report.flag_history.length > 0 && (
                   <div>
-                    <div className="mgr-section-title">Flag History</div>
+                    <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-2">Flag History</p>
                     {report.flag_history.map((fh, i) => (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '6px 0', borderBottom: '1px solid var(--border-subtle)', fontSize: 12,
-                      }}>
+                      <div key={i} className="flex items-center gap-2 py-2 border-b border-custom-divider/50 last:border-0 text-[12px]">
                         <RiskBadge level={fh.risk_level} />
-                        <span style={{ color: 'var(--text-3)' }}>{fh.weeks_flagged}w · {formatDate(fh.created_at)}</span>
+                        <span className="text-on-surface-variant">{fh.weeks_flagged}w · {formatDate(fh.created_at)}</span>
                         <StatusBadge status={fh.status} />
                       </div>
                     ))}
@@ -331,10 +367,18 @@ const SlideOver: React.FC<{
           }
         </div>
 
-        <div className="mgr-slideover-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Close</button>
+        <div className="flex items-center justify-end gap-3 px-lg py-md border-t border-custom-divider flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-btn border border-outline-variant text-on-surface-variant text-[14px] font-medium hover:bg-surface-container transition-colors"
+          >
+            Close
+          </button>
           {report && flag.flag_status !== 'assigned' && (
-            <button className="btn btn-primary" onClick={() => onAssign(report, flag.flag_id)}>
+            <button
+              onClick={() => onAssign(report, flag.flag_id)}
+              className="px-4 py-2 rounded-btn bg-primary text-on-primary text-[14px] font-medium hover:bg-primary/90 transition-colors"
+            >
               Assign Counsellor
             </button>
           )}
@@ -372,27 +416,44 @@ export const StudentsPage: React.FC = () => {
   }, [refetch]);
 
   return (
-    <div className="fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>At-Risk Students</h1>
-          <p style={{ color: 'var(--text-3)', fontSize: 13 }}>
-            {flags.length} student{flags.length !== 1 ? 's' : ''} flagged · sorted by priority
-          </p>
-        </div>
+    <div className="px-8 py-8 max-w-[1200px] mx-auto">
+      {/* Header */}
+      <div className="mb-xl">
+        <h1 className="text-[22px] font-light text-on-surface mb-1">Students · At-Risk List</h1>
+        <p className="text-[13px] text-on-surface-variant">
+          {flags.length} student{flags.length !== 1 ? 's' : ''} flagged · sorted by priority
+        </p>
       </div>
 
       {/* Filters */}
-      <div className="mgr-filter-bar">
-        <input placeholder="Branch" value={branch} onChange={e => setBranch(e.target.value)} style={{ width: 120 }} />
-        <input placeholder="Batch" value={batch} onChange={e => setBatch(e.target.value)} style={{ width: 100 }} />
-        <select value={riskLevel} onChange={e => setRiskLevel(e.target.value)}>
+      <div className="flex flex-wrap gap-2 mb-lg">
+        <input
+          placeholder="Branch"
+          value={branch}
+          onChange={e => setBranch(e.target.value)}
+          className="px-md py-xs rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface text-[14px] font-medium focus:outline-none focus:border-primary w-28"
+        />
+        <input
+          placeholder="Batch"
+          value={batch}
+          onChange={e => setBatch(e.target.value)}
+          className="px-md py-xs rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface text-[14px] font-medium focus:outline-none focus:border-primary w-24"
+        />
+        <select
+          value={riskLevel}
+          onChange={e => setRiskLevel(e.target.value)}
+          className="px-md py-xs rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface text-[14px] font-medium focus:outline-none focus:border-primary"
+        >
           <option value="">All Risk Levels</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
+          <option value="high">High Risk</option>
+          <option value="medium">Medium Risk</option>
           <option value="watch">Watch</option>
         </select>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="px-md py-xs rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface text-[14px] font-medium focus:outline-none focus:border-primary"
+        >
           <option value="">All Statuses</option>
           <option value="unassigned">Unassigned</option>
           <option value="assigned">Assigned</option>
@@ -400,70 +461,74 @@ export const StudentsPage: React.FC = () => {
           <option value="ongoing">Ongoing</option>
         </select>
         {(branch || batch || riskLevel || statusFilter) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setBranch(''); setBatch(''); setRiskLevel(''); setStatusFilter(''); }}>
+          <button
+            onClick={() => { setBranch(''); setBatch(''); setRiskLevel(''); setStatusFilter(''); }}
+            className="px-md py-xs rounded-full border border-outline-variant bg-surface-container-lowest text-on-surface-variant text-[14px] font-medium hover:bg-surface-container transition-colors"
+          >
             Clear
           </button>
         )}
       </div>
 
       {/* Table */}
-      <div className="mgr-table-wrap">
-        {isLoading
-          ? <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-3)' }}>Loading…</div>
-          : flags.length === 0
-            ? (
-              <div style={{ padding: 48, textAlign: 'center' }}>
-                <CheckCircle size={36} style={{ color: '#22d3a0', margin: '0 auto 12px' }} />
-                <p style={{ fontWeight: 600, marginBottom: 4 }}>No students flagged</p>
-                <p style={{ fontSize: 13, color: 'var(--text-3)' }}>All clear for the current filters.</p>
-              </div>
-            )
-            : (
-              <table className="mgr-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Branch / Batch</th>
-                    <th>Sem</th>
-                    <th>Risk</th>
-                    <th>Dimensions</th>
-                    <th>Weeks</th>
-                    <th>Status</th>
-                    <th>Last Check-in</th>
+      <div className="bg-surface-container-lowest rounded-card shadow-warm overflow-hidden">
+        {isLoading ? (
+          <div className="py-12 text-center text-on-surface-variant text-[14px]">Loading…</div>
+        ) : flags.length === 0 ? (
+          <div className="py-16 text-center">
+            <span className="material-symbols-outlined text-sage-green" style={{ fontSize: '36px' }}>check_circle</span>
+            <p className="mt-3 font-medium text-on-surface">No students flagged</p>
+            <p className="text-[13px] text-on-surface-variant mt-1">All clear for the current filters.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="border-b border-custom-divider bg-surface-container-low">
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Name</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Branch / Batch</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Sem</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Risk</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Dimensions</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Weeks</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Status</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Last Check-in</th>
+                </tr>
+              </thead>
+              <tbody className="text-[14px] text-on-surface divide-y divide-custom-divider/50">
+                {flags.map(f => (
+                  <tr
+                    key={f.flag_id}
+                    onClick={() => setSelectedFlag(f)}
+                    className="h-12 hover:bg-surface-container-low transition-colors cursor-pointer"
+                  >
+                    <td className="px-md py-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center text-[11px] font-semibold text-on-surface-variant flex-shrink-0">
+                          {f.student_name.charAt(0)}
+                        </div>
+                        <span className="font-medium">{f.student_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-md py-2 text-on-surface-variant">{f.branch || '—'} / {f.batch || '—'}</td>
+                    <td className="px-md py-2 text-on-surface-variant">{f.semester || '—'}</td>
+                    <td className="px-md py-2"><RiskBadge level={f.risk_level} /></td>
+                    <td className="px-md py-2">
+                      <div className="flex gap-1 flex-wrap">
+                        {f.triggered_dimensions?.map(d => (
+                          <span key={d} className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[11px]">{d}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-md py-2 font-medium">{f.weeks_flagged}</td>
+                    <td className="px-md py-2"><StatusBadge status={f.assignment_status || f.flag_status} /></td>
+                    <td className="px-md py-2 text-on-surface-variant">{formatDate(f.last_checkin_date)}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {flags.map(f => (
-                    <tr key={f.flag_id} onClick={() => setSelectedFlag(f)}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{
-                            width: 28, height: 28, borderRadius: '50%', background: 'var(--sage-light)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontSize: 11, fontWeight: 700, color: 'var(--sage)', flexShrink: 0,
-                          }}>
-                            {f.student_name.charAt(0)}
-                          </div>
-                          <span style={{ fontWeight: 500 }}>{f.student_name}</span>
-                        </div>
-                      </td>
-                      <td style={{ color: 'var(--text-3)' }}>{f.branch || '—'} / {f.batch || '—'}</td>
-                      <td style={{ color: 'var(--text-3)' }}>{f.semester || '—'}</td>
-                      <td><RiskBadge level={f.risk_level} /></td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          {f.triggered_dimensions?.map(d => <span key={d} className="tag-chip">{d}</span>)}
-                        </div>
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{f.weeks_flagged}</td>
-                      <td><StatusBadge status={f.assignment_status || f.flag_status} /></td>
-                      <td style={{ color: 'var(--text-3)' }}>{formatDate(f.last_checkin_date)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )
-        }
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Slide-over */}

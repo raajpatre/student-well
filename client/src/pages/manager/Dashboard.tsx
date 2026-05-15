@@ -28,32 +28,29 @@ interface SemesterReport {
 }
 
 const STATS = [
-  { key: 'total_active_students', label: 'Active Students', color: 'var(--sage)' },
-  { key: 'new_flags_this_week', label: 'New Flags (Week)', color: '#f97316' },
-  { key: 'pending_assignments', label: 'Pending Assign.', color: '#f59e0b' },
-  { key: 'open_interventions', label: 'Open Cases', color: '#7c6ff7' },
-  { key: 'checkin_completion_rate', label: 'Check-in Rate', color: '#22d3a0', suffix: '%' },
-] satisfies ReadonlyArray<{ key: keyof DashboardStats; label: string; color: string; suffix?: string }>;
+  { key: 'total_active_students', label: 'Active Students', color: 'text-on-surface', valueColor: 'text-on-surface' },
+  { key: 'new_flags_this_week', label: 'New Flags This Wk', color: 'text-on-surface', valueColor: 'text-terracotta' },
+  { key: 'pending_assignments', label: 'Pending Assign.', color: 'text-on-surface', valueColor: 'text-terracotta' },
+  { key: 'open_interventions', label: 'Open Interventions', color: 'text-on-surface', valueColor: 'text-sage-green' },
+  { key: 'checkin_completion_rate', label: 'Check-in Rate', color: 'text-on-surface', valueColor: 'text-on-surface', suffix: '%' },
+] satisfies ReadonlyArray<{ key: keyof DashboardStats; label: string; color: string; valueColor: string; suffix?: string }>;
 
 function riskColor(count: number, total: number): string {
-  if (total === 0) return '#2a2c37';
+  if (total === 0) return 'bg-surface-container-low text-on-surface-variant';
   const pct = count / total;
-  if (pct > 0.4) return '#f97316';
-  if (pct > 0.2) return '#f59e0b';
-  if (pct > 0) return '#22d3a0';
-  return '#2a2c37';
+  if (pct > 0.4) return 'bg-[#fdf1ea] text-terracotta';
+  if (pct > 0.2) return 'bg-[#fff9e6] text-[#92660a]';
+  if (pct > 0) return 'bg-[#f0f7f4] text-sage-dark';
+  return 'bg-surface-container text-on-surface-variant';
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: 'var(--surface-raised)', border: '1px solid var(--border)',
-      borderRadius: 8, padding: '8px 12px', fontSize: 12,
-    }}>
-      <p style={{ color: 'var(--text-3)', marginBottom: 4 }}>{label}</p>
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2 shadow-warm text-[12px]">
+      <p className="text-on-surface-variant mb-1">{label}</p>
       {payload.map((p: any) => (
-        <p key={p.dataKey} style={{ color: p.color, fontWeight: 600 }}>
+        <p key={p.dataKey} style={{ color: p.color }} className="font-semibold">
           {p.name}: {p.value}{p.unit || ''}
         </p>
       ))}
@@ -67,99 +64,107 @@ export const ManagerDashboard: React.FC = () => {
   const { data: report } = useApi<SemesterReport>('/api/manager/reports/semester');
 
   return (
-    <div className="fade-in">
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Overview</h1>
-      <p style={{ color: 'var(--text-3)', fontSize: 13, marginBottom: 24 }}>
-        {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-      </p>
+    <div className="px-8 py-8 max-w-[1200px] mx-auto">
+      {/* Header */}
+      <div className="mb-xl">
+        <h1 className="text-[22px] font-light text-on-surface mb-1">Overview</h1>
+        <p className="text-[13px] text-text-muted-warm">
+          {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+        </p>
+      </div>
 
       {/* Stats strip */}
-      <div className="mgr-stats-grid">
-        {STATS.map(({ key, label, color, suffix }) => (
-          <div key={key} className="mgr-stat-card" style={{ borderTop: `3px solid ${color}` }}>
-            <div className="mgr-stat-label">{label}</div>
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-xl">
+        {STATS.map(({ key, label, valueColor, suffix }) => (
+          <div key={key} className="bg-surface-container-lowest rounded-2xl p-md shadow-warm flex flex-col justify-between min-h-[90px]">
+            <span className="text-label-caps text-text-muted-warm uppercase tracking-wider mb-2">{label}</span>
             {loadingStats
-              ? <div className="skeleton" style={{ height: 36, width: 80, borderRadius: 6 }} />
-              : <div className="mgr-stat-value" style={{ color }}>
+              ? <div className="h-8 w-16 rounded-md bg-surface-container animate-pulse" />
+              : <span className={`text-[32px] font-light leading-none ${valueColor}`}>
                   {(stats as any)?.[key] ?? '—'}{suffix || ''}
-                </div>
+                </span>
             }
           </div>
         ))}
       </div>
 
-      {/* Grid: heatmap + charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-
+      {/* Two columns: Heatmap + Flag trend */}
+      <div className="flex flex-col xl:flex-row gap-6 mb-xl">
         {/* Heatmap */}
-        <div>
-          <div className="mgr-section-title">Wellness Heatmap — by Branch / Batch</div>
-          {!heatmapData?.heatmap?.length
-            ? <p style={{ color: 'var(--text-3)', fontSize: 13 }}>No data yet.</p>
-            : <div className="mgr-heatmap">
-                {heatmapData.heatmap.map(cell => {
-                  const maxRisk = Math.max(cell.academic_risk_count, cell.emotional_risk_count, cell.social_risk_count);
-                  const topColor = riskColor(maxRisk, cell.total_students);
-                  return (
-                    <div key={`${cell.branch}-${cell.batch}`} className="heatmap-cell"
-                      style={{ '--cell-color': topColor } as React.CSSProperties}>
-                      <div className="heatmap-label">{cell.branch}</div>
-                      <div className="heatmap-sub">Batch {cell.batch} · {cell.total_students} students</div>
-                      <div className="heatmap-bars">
-                        {[
-                          { label: 'Acad', count: cell.academic_risk_count, color: '#7c6ff7' },
-                          { label: 'Emot', count: cell.emotional_risk_count, color: '#f97316' },
-                          { label: 'Social', count: cell.social_risk_count, color: '#22d3a0' },
-                        ].map(({ label, count, color }) => (
-                          <div key={label} className="heatmap-bar-row">
-                            <span style={{ width: 38, flexShrink: 0 }}>{label}</span>
-                            <div style={{ flex: 1, background: 'var(--border)', height: 5, borderRadius: 99 }}>
-                              <div className="heatmap-bar-fill" style={{
-                                background: color,
-                                width: cell.total_students ? `${(count / cell.total_students) * 100}%` : '0%'
-                              }} />
-                            </div>
-                            <span style={{ width: 18, textAlign: 'right' }}>{count}</span>
+        <div className="xl:w-[60%] bg-surface-container-lowest rounded-2xl p-lg shadow-warm">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-[18px] font-normal text-on-surface">Batch Wellness Heatmap</h2>
+            <span className="text-label-caps text-outline uppercase tracking-wider">By Branch / Batch</span>
+          </div>
+          {!heatmapData?.heatmap?.length ? (
+            <p className="text-[13px] text-on-surface-variant py-8 text-center">No heatmap data yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[400px]">
+                <thead>
+                  <tr>
+                    <th className="text-label-caps text-text-muted-warm font-medium pb-3 uppercase">Batch</th>
+                    <th className="text-label-caps text-text-muted-warm font-medium pb-3 text-center uppercase">Academic</th>
+                    <th className="text-label-caps text-text-muted-warm font-medium pb-3 text-center uppercase">Emotional</th>
+                    <th className="text-label-caps text-text-muted-warm font-medium pb-3 text-center uppercase">Social</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {heatmapData.heatmap.map(cell => (
+                    <tr key={`${cell.branch}-${cell.batch}`} className="border-b border-border-light/50 last:border-0">
+                      <td className="text-[14px] font-medium text-on-surface py-3">
+                        {cell.branch} {cell.batch}
+                        <span className="ml-2 text-[11px] text-text-muted-warm">({cell.total_students})</span>
+                      </td>
+                      {[
+                        { count: cell.academic_risk_count },
+                        { count: cell.emotional_risk_count },
+                        { count: cell.social_risk_count },
+                      ].map((dim, idx) => (
+                        <td key={idx} className="py-3 text-center">
+                          <div className={`inline-flex items-center justify-center w-10 h-10 rounded-lg text-[13px] font-medium mx-auto ${riskColor(dim.count, cell.total_students)}`}>
+                            {dim.count}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-          }
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Charts column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="xl:w-[40%] flex flex-col gap-4">
           {/* Flag trend */}
-          <div className="mgr-chart-wrap">
-            <div className="mgr-chart-title">📊 Flags Raised — Last 8 Weeks</div>
-            <ResponsiveContainer width="100%" height={150}>
+          <div className="bg-surface-container-lowest rounded-2xl p-lg shadow-warm flex-1">
+            <h2 className="text-[16px] font-medium text-on-surface mb-4">Flags Raised · Last 8 Weeks</h2>
+            <ResponsiveContainer width="100%" height={130}>
               <BarChart data={report?.flag_trend || []} barSize={14}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
+                <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D9" vertical={false} />
+                <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#B0A89E' }} tickLine={false} axisLine={false}
                   tickFormatter={w => w.slice(5)} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false} width={24} />
+                <YAxis tick={{ fontSize: 10, fill: '#B0A89E' }} tickLine={false} axisLine={false} width={24} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="count" name="Flags" fill="#f97316" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" name="Flags" fill="#D4956A" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Engagement trend */}
-          <div className="mgr-chart-wrap">
-            <div className="mgr-chart-title">✅ Check-in Engagement — Last 8 Weeks</div>
-            <ResponsiveContainer width="100%" height={150}>
+          <div className="bg-surface-container-lowest rounded-2xl p-lg shadow-warm flex-1">
+            <h2 className="text-[16px] font-medium text-on-surface mb-4">Check-in Engagement · Last 8 Weeks</h2>
+            <ResponsiveContainer width="100%" height={130}>
               <LineChart data={report?.weekly_engagement || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="week" tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
+                <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D9" vertical={false} />
+                <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#B0A89E' }} tickLine={false} axisLine={false}
                   tickFormatter={w => w.slice(5)} />
-                <YAxis tick={{ fontSize: 10, fill: 'var(--text-3)' }} tickLine={false} axisLine={false}
+                <YAxis tick={{ fontSize: 10, fill: '#B0A89E' }} tickLine={false} axisLine={false}
                   width={30} unit="%" domain={[0, 100]} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line dataKey="rate" name="Completion" stroke="#22d3a0" strokeWidth={2}
-                  dot={{ r: 3, fill: '#22d3a0' }} unit="%" />
+                <Line dataKey="rate" name="Completion" stroke="#7c9e8f" strokeWidth={2}
+                  dot={{ r: 3, fill: '#7c9e8f' }} unit="%" />
               </LineChart>
             </ResponsiveContainer>
           </div>

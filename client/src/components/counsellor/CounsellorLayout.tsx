@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { ChevronRight, ClipboardList, LogOut, Menu, UserCircle, X } from 'lucide-react';
 
 const navItems = [
-  { to: '/counsellor/dashboard', icon: ClipboardList, label: 'My Students' },
-  { to: '/counsellor/profile', icon: UserCircle, label: 'Profile' },
+  { to: '/counsellor/dashboard', iconInactive: 'home', iconActive: 'home', label: 'Home' },
+  { to: '/counsellor/profile', iconInactive: 'person', iconActive: 'person', label: 'My Profile' },
 ];
 
 export const CounsellorLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  // sidebarOpen state kept for API compatibility though unused in mobile-first layout
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
@@ -18,62 +18,86 @@ export const CounsellorLayout: React.FC<{ children: React.ReactNode }> = ({ chil
     navigate('/login');
   };
 
+  const initials = user?.full_name
+    ? user.full_name.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()
+    : 'C';
+
   return (
-    <div className="mgr-layout">
-      {sidebarOpen && <div className="mgr-overlay" onClick={() => setSidebarOpen(false)} />}
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Sticky glass top bar */}
+      <header className="w-full sticky top-0 z-40 bg-surface/80 backdrop-blur-md border-b border-outline-variant/30 transition-all duration-300">
+        <div className="flex items-center justify-between px-gutter py-md w-full max-w-2xl mx-auto">
+          {/* WordMark */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center">
+              <span
+                className="material-symbols-outlined text-on-primary-container"
+                style={{ fontSize: '18px', fontVariationSettings: "'FILL' 1" }}
+              >
+                eco
+              </span>
+            </div>
+            <span className="font-display text-[20px] font-light text-primary leading-none">StudentWell</span>
+          </div>
 
-      <aside className={`mgr-sidebar${sidebarOpen ? ' open' : ''}`}>
-        <div className="mgr-sidebar-header">
-          <span className="brand">Student<span>Well</span></span>
-          <button className="mgr-close-btn" onClick={() => setSidebarOpen(false)}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="mgr-sidebar-role">Counsellor Portal</div>
-
-        <nav className="mgr-nav">
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `mgr-nav-item${isActive ? ' active' : ''}`}
+          {/* Right actions */}
+          <div className="flex items-center gap-2">
+            <button
+              aria-label="Notifications"
+              className="p-2 text-primary hover:opacity-80 transition-opacity rounded-full hover:bg-surface-container-low"
             >
-              <Icon size={17} />
-              <span>{label}</span>
-              <ChevronRight size={13} className="mgr-nav-arrow" />
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="mgr-sidebar-footer">
-          <div className="mgr-user-info">
-            <div className="mgr-user-avatar">{user?.full_name?.charAt(0) || 'C'}</div>
-            <div>
-              <div className="mgr-user-name">{user?.full_name}</div>
-              <div className="mgr-user-role">Counsellor</div>
+              <span
+                className="material-symbols-outlined"
+                style={{ fontSize: '22px', fontVariationSettings: "'FILL' 0" }}
+              >
+                notifications
+              </span>
+            </button>
+            {/* Counsellor avatar */}
+            <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center border-2 border-surface-container-highest">
+              <span className="text-on-primary-container font-body-sm text-[13px] font-medium">{initials}</span>
             </div>
           </div>
-          <button className="mgr-logout-btn" onClick={handleLogout}>
-            <LogOut size={15} />
-          </button>
         </div>
-      </aside>
+      </header>
 
-      <div className="mgr-main-wrap">
-        <header className="mgr-topbar">
-          <button className="mgr-menu-btn" onClick={() => setSidebarOpen(true)}>
-            <Menu size={20} />
-          </button>
-          <span className="mgr-topbar-title">
-            {navItems.find(n => location.pathname.startsWith(n.to))?.label || 'My Students'}
-          </span>
-          <span className="mgr-topbar-user">{user?.full_name?.split(' ')[0]}</span>
-        </header>
+      {/* Scrollable main content */}
+      <main className="flex-1 pb-24">
+        {children}
+      </main>
 
-        <main className="mgr-main counsellor-main">{children}</main>
-      </div>
+      {/* Glass bottom nav */}
+      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-surface-container-lowest/90 backdrop-blur-md shadow-warm rounded-t-xl transition-all duration-200">
+        {navItems.map(({ to, iconInactive, iconActive, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            onClick={() => setSidebarOpen(false)}
+            className="flex flex-col items-center justify-center"
+          >
+            {({ isActive }) => (
+              <div
+                className={`flex flex-col items-center justify-center rounded-xl px-4 py-2 transition-colors active:scale-95 ${
+                  isActive
+                    ? 'bg-primary-container text-on-primary-container'
+                    : 'text-on-surface-variant hover:bg-surface-container-low'
+                }`}
+              >
+                <span
+                  className="material-symbols-outlined mb-1"
+                  style={{
+                    fontSize: '22px',
+                    fontVariationSettings: isActive ? "'FILL' 1" : "'FILL' 0",
+                  }}
+                >
+                  {isActive ? iconActive : iconInactive}
+                </span>
+                <span className="font-label-caps text-label-caps">{label}</span>
+              </div>
+            )}
+          </NavLink>
+        ))}
+      </nav>
     </div>
   );
 };

@@ -1,9 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import { useApi } from '../../hooks/useApi';
 import { StatusBadge } from '../../components/student/StatusBadge';
-import { MessageCircle, TrendingUp, Users, Shield, ChevronRight, Bell } from 'lucide-react';
 
 interface WellnessSignals {
   academic_status: string | null;
@@ -33,34 +31,36 @@ const WELLNESS_CARDS = [
   {
     key: 'academic' as const,
     label: 'Academic Momentum',
-    icon: '📚',
+    icon: 'school',
     statusKey: 'academic_status' as const,
     scoreKey: 'academic_score' as const,
     suggestionKey: 'academic_suggestion' as const,
+    borderColor: 'border-l-primary-container',
+    iconBg: 'bg-surface-container-low text-primary',
+    isFilled: false,
   },
   {
     key: 'emotional' as const,
     label: 'Emotional Baseline',
-    icon: '💙',
+    icon: 'favorite',
     statusKey: 'emotional_status' as const,
     scoreKey: 'emotional_score' as const,
     suggestionKey: 'emotional_suggestion' as const,
+    borderColor: 'border-l-tertiary',
+    iconBg: 'bg-terracotta-light text-tertiary',
+    isFilled: true,
   },
   {
     key: 'social' as const,
     label: 'Social Connection',
-    icon: '🤝',
+    icon: 'groups',
     statusKey: 'social_status' as const,
     scoreKey: 'social_score' as const,
     suggestionKey: 'social_suggestion' as const,
+    borderColor: 'border-l-primary-container',
+    iconBg: 'bg-surface-container-low text-primary',
+    isFilled: false,
   },
-];
-
-const quickLinks = [
-  { to: '/student/chat', icon: MessageCircle, label: 'Talk to AI' },
-  { to: '/student/spaces', icon: Users, label: 'Spaces' },
-  { to: '/student/trends', icon: TrendingUp, label: 'My Trends' },
-  { to: '/student/privacy', icon: Shield, label: 'Privacy' },
 ];
 
 function timeAgo(dateStr: string | null): string {
@@ -74,8 +74,24 @@ function timeAgo(dateStr: string | null): string {
   return `${days} days ago`;
 }
 
+function getStatusBadgeClasses(status: string | null | undefined): string {
+  if (!status) return 'bg-surface-container text-on-surface-variant';
+  const s = status.toLowerCase();
+  if (s.includes('good') || s.includes('well')) return 'bg-primary-fixed/30 text-on-primary-container';
+  if (s.includes('care') || s.includes('check') || s.includes('support')) return 'bg-tertiary-fixed-dim/30 text-on-tertiary-container';
+  return 'bg-surface-container text-on-surface-variant';
+}
+
+function getStatusLabel(status: string | null | undefined): string {
+  if (!status) return 'No data';
+  const s = status.toLowerCase();
+  if (s === 'good') return 'Doing Well';
+  if (s === 'check_in' || s === 'check-in') return 'Check In';
+  if (s === 'support') return 'Needs Care';
+  return status;
+}
+
 export const DashboardPage: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const { data: studentInfo, isLoading: loadingInfo } = useApi<StudentInfo>('/api/student/me');
   const { data: checkinStatus, isLoading: loadingCheckin } = useApi<CheckinStatus>('/api/checkins/status');
@@ -88,115 +104,141 @@ export const DashboardPage: React.FC = () => {
   const isLoading = loadingInfo || loadingCheckin;
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Greeting */}
-      <div>
-        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
-          Hey, {user?.full_name?.split(' ')[0] || 'there'} 👋
-        </h1>
-        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>
-          {new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
-      </div>
-
+    <div className="flex flex-col gap-xl">
       {/* Counsellor Banner */}
       {showCounsellorBanner && (
-        <div className="banner banner-info" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          <Bell size={18} style={{ color: 'var(--sage)', flexShrink: 0, marginTop: 2 }} />
-          <p style={{ fontSize: 14, lineHeight: 1.5 }}>
+        <div className="bg-primary-fixed/30 border border-primary-container/30 rounded-2xl px-4 py-3 flex items-start gap-3">
+          <span className="material-symbols-outlined text-primary text-[18px] mt-0.5">notifications</span>
+          <p className="text-[14px] text-on-surface leading-relaxed">
             Someone from the support team will be in touch with you soon. You're not alone in this.
           </p>
         </div>
       )}
 
-      {/* Pending Check-in */}
-      {!loadingCheckin && hasPendingCheckin && (
-        <div
-          className="card"
-          style={{
-            background: 'linear-gradient(135deg, rgba(124, 111, 247, 0.15), rgba(124, 111, 247, 0.05))',
-            borderColor: 'var(--border-focus)',
-            cursor: 'pointer'
-          }}
-          onClick={() => navigate('/student/checkin')}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: 20, marginBottom: 6 }}>🌱</div>
-              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>This week's check-in is ready</h3>
-              <p style={{ fontSize: 13, color: 'var(--text-3)' }}>Takes about 90 seconds</p>
-            </div>
-            <button className="btn btn-primary btn-sm" onClick={() => navigate('/student/checkin')}>
-              Check in now
-            </button>
+      {/* Section 1: Quote Hero Card */}
+      <section className="w-full">
+        <div className="bg-surface-container-lowest rounded-2xl shadow-warm overflow-hidden relative p-6 pt-8">
+          {/* Top gradient line */}
+          <div className="absolute top-0 left-0 w-full h-[3px] quote-gradient" />
+          {/* Decorative Quote Mark */}
+          <div className="absolute top-4 left-4 font-serif-display text-6xl text-primary-fixed-dim opacity-40 leading-none select-none">"</div>
+          <div className="relative z-10 text-center mt-2">
+            <p className="font-serif-display italic text-[19px] text-on-surface leading-relaxed">
+              You don't have to be extraordinary every day. Showing up is enough.
+            </p>
+            <p className="font-label-caps text-label-caps text-on-surface-variant mt-4 tracking-widest uppercase">
+              — StudentWell
+            </p>
+          </div>
+          {/* Indicators */}
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <div className="w-4 h-1.5 rounded-full bg-primary-container" />
+            <div className="w-1.5 h-1.5 rounded-full bg-surface-variant" />
+            <div className="w-1.5 h-1.5 rounded-full bg-surface-variant" />
           </div>
         </div>
-      )}
+      </section>
 
-      {/* Wellness Cards */}
-      <div>
-        <div className="section-header">
-          <span className="section-title">Your Wellbeing</span>
-          {signals?.last_updated && (
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-              Updated {timeAgo(signals.last_updated)}
+      {/* Section 2: Quick Actions */}
+      <section className="w-full flex flex-col gap-4">
+        <h2 className="font-label-caps text-label-caps text-on-surface-variant tracking-widest pl-1 uppercase">
+          QUICK ACCESS
+        </h2>
+        <div className="grid grid-cols-3 gap-3">
+          {/* Card 1: Talk to Counsellor */}
+          <button
+            className="bg-surface-container-lowest rounded-2xl p-4 flex flex-col items-center text-center shadow-warm border border-surface-variant/50 relative hover:bg-surface-container-low transition-colors group"
+            onClick={() => navigate('/student/chat')}
+          >
+            <div className="w-12 h-12 rounded-full bg-terracotta-light flex items-center justify-center text-tertiary mb-3 group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined">chat_bubble</span>
+            </div>
+            <span className="font-body-sm text-[12px] leading-tight text-on-surface h-8 flex items-center">Talk to Counsellor</span>
+            <span className="text-[10px] text-on-surface-variant mt-1">Always here</span>
+          </button>
+
+          {/* Card 2: Weekly Check-in */}
+          <button
+            className="bg-surface-container-lowest rounded-2xl p-4 flex flex-col items-center text-center shadow-warm border border-surface-variant/50 relative hover:bg-surface-container-low transition-colors group"
+            onClick={() => navigate('/student/checkin')}
+          >
+            {hasPendingCheckin && (
+              <div className="absolute top-3 right-3 w-2 h-2 rounded-full bg-tertiary animate-pulse opacity-70" />
+            )}
+            <div className="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center text-primary-container mb-3 group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined">self_improvement</span>
+            </div>
+            <span className="font-body-sm text-[12px] leading-tight text-on-surface h-8 flex items-center">Weekly Check-in</span>
+            <span className={`text-[10px] mt-1 ${hasPendingCheckin ? 'text-tertiary' : 'text-on-surface-variant'}`}>
+              {hasPendingCheckin ? 'Pending' : 'Done'}
             </span>
+          </button>
+
+          {/* Card 3: Find Your People */}
+          <button
+            className="bg-surface-container-lowest rounded-2xl p-4 flex flex-col items-center text-center shadow-warm border border-surface-variant/50 hover:bg-surface-container-low transition-colors group"
+            onClick={() => navigate('/student/spaces')}
+          >
+            <div className="w-12 h-12 rounded-full bg-indigo-light flex items-center justify-center text-primary mb-3 group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined">group</span>
+            </div>
+            <span className="font-body-sm text-[12px] leading-tight text-on-surface h-8 flex items-center">Find Your People</span>
+            <span className="text-[10px] text-on-surface-variant mt-1">Spaces</span>
+          </button>
+        </div>
+      </section>
+
+      {/* Section 3: YOUR PULSE TODAY */}
+      <section className="w-full flex flex-col gap-4 pb-8">
+        <div className="flex items-center justify-between">
+          <h2 className="font-label-caps text-label-caps text-on-surface-variant tracking-widest pl-1 uppercase">
+            YOUR PULSE TODAY
+          </h2>
+          {signals?.last_updated && (
+            <span className="text-[11px] text-outline">Updated {timeAgo(signals.last_updated)}</span>
           )}
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-3">
           {isLoading
             ? [1, 2, 3].map((i) => (
-                <div key={i} className="skeleton" style={{ height: 100, borderRadius: 'var(--radius-lg)' }} />
+                <div key={i} className="bg-surface-container-lowest rounded-2xl h-[88px] animate-pulse" />
               ))
-            : WELLNESS_CARDS.map(({ key, label, icon, statusKey, suggestionKey }) => (
-                <div key={key} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 20 }}>{icon}</span>
-                      <span style={{ fontSize: 15, fontWeight: 600 }}>{label}</span>
-                    </div>
-                    <StatusBadge status={signals?.[statusKey] as any} />
+            : WELLNESS_CARDS.map(({ key, label, icon, statusKey, suggestionKey, borderColor, iconBg, isFilled }) => (
+                <div
+                  key={key}
+                  className={`bg-surface-container-lowest rounded-2xl p-4 shadow-warm border-l-[3px] ${borderColor} flex items-start gap-4 hover:shadow-warm-glow transition-shadow cursor-pointer`}
+                >
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-1 ${iconBg}`}>
+                    <span
+                      className="material-symbols-outlined text-[20px]"
+                      style={isFilled ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                    >
+                      {icon}
+                    </span>
                   </div>
-                  {signals?.[suggestionKey] && (
-                    <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.5 }}>
-                      {signals[suggestionKey]}
-                    </p>
-                  )}
-                  {!signals && (
-                    <p style={{ fontSize: 13, color: 'var(--text-3)' }}>
-                      Complete your first check-in to see insights here.
-                    </p>
-                  )}
+                  <div className="flex-1 flex flex-col gap-1">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-body-sm text-[15px] text-on-surface">{label}</h3>
+                      {signals?.[statusKey] ? (
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getStatusBadgeClasses(signals[statusKey])}`}>
+                          {getStatusLabel(signals[statusKey])}
+                        </span>
+                      ) : (
+                        <StatusBadge status={signals?.[statusKey] as any} />
+                      )}
+                    </div>
+                    {signals?.[suggestionKey] ? (
+                      <p className="text-[13px] text-on-surface-variant leading-relaxed">{signals[suggestionKey]}</p>
+                    ) : !signals ? (
+                      <p className="text-[13px] text-on-surface-variant">
+                        Complete your first check-in to see insights here.
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
               ))}
         </div>
-      </div>
-
-      {/* Quick Access */}
-      <div>
-        <div className="section-header">
-          <span className="section-title">Quick Access</span>
-        </div>
-        <div className="grid-2">
-          {quickLinks.map(({ to, icon: Icon, label }) => (
-            <button
-              key={to}
-              className="card btn-secondary"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
-                cursor: 'pointer', justifyContent: 'flex-start', border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-md)', width: '100%'
-              }}
-              onClick={() => navigate(to)}
-            >
-              <Icon size={18} style={{ color: 'var(--sage)' }} />
-              <span style={{ fontSize: 14, fontWeight: 500 }}>{label}</span>
-              <ChevronRight size={14} style={{ color: 'var(--text-3)', marginLeft: 'auto' }} />
-            </button>
-          ))}
-        </div>
-      </div>
+      </section>
     </div>
   );
 };

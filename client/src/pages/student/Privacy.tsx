@@ -1,38 +1,87 @@
 import React, { useState } from 'react';
 import { apiCall } from '../../lib/api';
-import { Shield, Eye, Bell, Sliders, Download, Trash2, LogOut, ChevronDown, ChevronUp } from 'lucide-react';
 
-const PRIVACY_SECTIONS = [
+interface PrivacyContentItem {
+  icon: string;
+  label: string;
+  desc: string;
+  filled?: boolean;
+  numbered?: boolean;
+}
+
+interface PrivacySection {
+  id: string;
+  title: string;
+  content: PrivacyContentItem[];
+}
+
+const PRIVACY_SECTIONS: PrivacySection[] = [
   {
     id: 'what_we_know',
-    icon: Shield,
     title: 'What we know about you',
     content: [
-      { label: 'Check-in responses', desc: 'Your weekly emotional, rest, academic, and social scores.' },
-      { label: 'Wellness signals', desc: 'A computed signal (Good / Check-in / Support Available) per dimension, updated weekly.' },
-      { label: 'Chat session metadata', desc: 'When sessions started and ended. Chat messages themselves are never shared.' },
-      { label: 'Attendance data', desc: 'Attendance percentage provided by your institution.' },
+      {
+        icon: 'bar_chart',
+        label: 'Attendance data',
+        desc: 'From college system',
+      },
+      {
+        icon: 'check_circle',
+        label: 'Weekly check-in responses',
+        desc: 'Your mood and answers',
+        filled: true,
+      },
+      {
+        icon: 'chat_bubble',
+        label: 'Counsellor chat sessions',
+        desc: 'Your messages only',
+      },
+      {
+        icon: 'smartphone',
+        label: 'App activity',
+        desc: 'When you log in',
+      },
     ],
   },
   {
     id: 'college_sees',
-    icon: Eye,
-    title: 'What your college can see',
+    title: 'What your college sees',
     content: [
-      { label: 'Wellness signals only', desc: 'Your counsellor and manager see your wellness signal level (Good / Check-in / Support Available) — not your raw scores or check-in answers.' },
-      { label: 'Chat summaries you share', desc: 'If you choose to share a chat session, your counsellor sees a short AI-generated summary only. They never see the raw conversation.' },
-      { label: 'Nothing by default', desc: 'Until you share or a welfare concern is detected, only you can see your data.' },
+      {
+        icon: 'visibility',
+        label: 'Nothing identifiable',
+        desc: 'Your college sees anonymous patterns, not your name, until a counsellor reaches out to you first.',
+      },
     ],
   },
   {
     id: 'escalation',
-    icon: Bell,
-    title: 'What triggers a support notification',
+    title: 'What triggers a notification',
     content: [
-      { label: 'Level 1 — Gentle nudge', desc: 'If the AI notices ongoing low mood across several messages, it may gently ask if you\'d like to talk to a real person. No one is notified.' },
-      { label: 'Level 2 — Counsellor heads-up', desc: 'If you express thoughts of self-harm, a note is sent to your assigned counsellor so they can check in with you. This is for your safety.' },
-      { label: 'Level 3 — Immediate support', desc: 'If you express immediate risk, both your counsellor and a support manager are notified right away. Crisis helplines are shared with you in the chat.' },
+      {
+        icon: '1',
+        label: 'Sustained low check-ins for 3+ weeks',
+        desc: 'Automated gentle nudge',
+        numbered: true,
+      },
+      {
+        icon: '2',
+        label: 'Distress signals in chat',
+        desc: "You'll be asked first",
+        numbered: true,
+      },
+      {
+        icon: '3',
+        label: 'Immediate safety concerns',
+        desc: 'Emergency contacts are provided immediately',
+        numbered: true,
+      },
     ],
+  },
+  {
+    id: 'your_controls',
+    title: 'Your controls',
+    content: [],
   },
 ];
 
@@ -68,103 +117,160 @@ export const PrivacyPage: React.FC = () => {
   };
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-lg pb-8 pt-4">
+      {/* Header */}
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Privacy & Controls</h1>
-        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>You are in control of your data.</p>
+        <h1 className="text-headline-md text-on-surface mb-1">Your Privacy</h1>
+        <p className="text-[14px] text-outline">You are in control of your data.</p>
       </div>
 
+      {/* Opening card */}
+      <section className="bg-surface-container-lowest rounded-card shadow-warm border-l-[3px] border-l-custom-terracotta p-md flex items-start gap-md">
+        <div className="shrink-0 bg-primary-fixed/20 rounded-full p-2 flex items-center justify-center">
+          <span
+            className="material-symbols-outlined text-primary-container text-[28px]"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            verified_user
+          </span>
+        </div>
+        <div className="flex-1">
+          <h2 className="text-[16px] font-medium text-on-surface mb-1">You are in control.</h2>
+          <p className="text-[13px] text-on-surface-variant">Here's exactly what we know, and what we share.</p>
+        </div>
+      </section>
+
       {successMsg && (
-        <div className="banner banner-info">
-          <p style={{ fontSize: 14 }}>{successMsg}</p>
+        <div className="bg-primary-fixed/30 border border-primary-container/30 rounded-input px-4 py-3 text-[13px] text-on-primary-container">
+          {successMsg}
         </div>
       )}
 
-      {/* Accordion Sections */}
-      {PRIVACY_SECTIONS.map(({ id, icon: Icon, title, content }) => (
-        <div key={id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <button
-            onClick={() => toggle(id)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px',
-              width: '100%', background: 'none', border: 'none', color: 'var(--text)',
-              cursor: 'pointer', textAlign: 'left'
-            }}
-          >
-            <Icon size={18} style={{ color: 'var(--sage)', flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 15, fontWeight: 600 }}>{title}</span>
-            {expanded === id ? <ChevronUp size={16} style={{ color: 'var(--text-3)' }} /> : <ChevronDown size={16} style={{ color: 'var(--text-3)' }} />}
-          </button>
-
-          {expanded === id && (
-            <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: 14, borderTop: '1px solid var(--border)' }}>
-              {content.map(({ label, desc }) => (
-                <div key={label} style={{ paddingTop: 14 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>{label}</div>
-                  <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6 }}>{desc}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-
-      {/* Controls */}
-      <div>
-        <div className="section-header">
-          <span className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Sliders size={13} /> Your Controls
-          </span>
-        </div>
-        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <button
-            className="btn btn-secondary btn-full"
-            onClick={handleDownload}
-            disabled={isDownloading}
-            style={{ justifyContent: 'flex-start', gap: 10 }}
-          >
-            <Download size={16} style={{ color: 'var(--sage)' }} />
-            {isDownloading ? 'Preparing your data...' : 'Download my data'}
-          </button>
-
-          <button
-            className="btn btn-secondary btn-full"
-            onClick={handleDeleteHistory}
-            disabled={isDeleting}
-            style={{ justifyContent: 'flex-start', gap: 10 }}
-          >
-            <Trash2 size={16} style={{ color: 'var(--attention)' }} />
-            {isDeleting ? 'Deleting...' : 'Delete my check-in history'}
-          </button>
-
-          {!showOptOutConfirm ? (
+      {/* Accordion */}
+      <div className="space-y-4">
+        {PRIVACY_SECTIONS.map(({ id, title, content }) => (
+          <div key={id} className="bg-surface-container-lowest rounded-card shadow-warm overflow-hidden">
             <button
-              className="btn btn-secondary btn-full"
-              onClick={() => setShowOptOutConfirm(true)}
-              style={{ justifyContent: 'flex-start', gap: 10 }}
+              className="flex items-center justify-between p-md w-full text-left cursor-pointer"
+              onClick={() => toggle(id)}
             >
-              <LogOut size={16} style={{ color: 'var(--warning)' }} />
-              Opt out of wellness monitoring
+              <h3 className="text-[16px] font-medium text-on-surface">{title}</h3>
+              <span
+                className="material-symbols-outlined text-outline transition-transform duration-200"
+                style={expanded === id ? { transform: 'rotate(180deg)' } : undefined}
+              >
+                expand_more
+              </span>
             </button>
-          ) : (
-            <div style={{ background: 'var(--warning-light)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 'var(--radius-md)', padding: '14px 16px' }}>
-              <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Are you sure?</p>
-              <p style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.6, marginBottom: 14 }}>
-                Opting out will stop all wellness tracking. Your college support team won't be able to proactively reach out, and your check-in history will no longer be collected. You can always opt back in.
-              </p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => setShowOptOutConfirm(false)}>Cancel</button>
-                <button
-                  className="btn btn-sm"
-                  style={{ background: 'var(--warning)', color: '#fff' }}
-                  onClick={() => { setShowOptOutConfirm(false); setSuccessMsg('Opt-out request submitted. It will take effect within 24 hours.'); }}
-                >
-                  Yes, opt out
-                </button>
+
+            {expanded === id && (
+              <div className="border-t border-surface-variant/30">
+                {id === 'your_controls' ? (
+                  <div className="px-md pb-md pt-0 space-y-1">
+                    <button
+                      className="w-full flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-surface-container-low transition-colors text-left"
+                      onClick={handleDeleteHistory}
+                      disabled={isDeleting}
+                    >
+                      <span className="material-symbols-outlined text-custom-terracotta opacity-80 text-[20px]">delete</span>
+                      <div>
+                        <p className="text-[15px] font-medium text-custom-terracotta">Delete check-in history</p>
+                        <p className="text-[11px] text-outline mt-0.5">Removes past mood data</p>
+                      </div>
+                    </button>
+                    <button
+                      className="w-full flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-surface-container-low transition-colors text-left"
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                    >
+                      <span className="material-symbols-outlined text-primary-container text-[20px]">download</span>
+                      <p className="text-[15px] font-medium text-primary-container">
+                        {isDownloading ? 'Preparing your data...' : 'Download my data'}
+                      </p>
+                    </button>
+                    {!showOptOutConfirm ? (
+                      <button
+                        className="w-full flex items-center gap-3 py-3 px-2 rounded-lg hover:bg-surface-container-low transition-colors text-left"
+                        onClick={() => setShowOptOutConfirm(true)}
+                      >
+                        <span className="material-symbols-outlined text-custom-terracotta opacity-80 text-[20px]">logout</span>
+                        <div>
+                          <p className="text-[15px] font-medium text-custom-terracotta">Opt out of monitoring</p>
+                          <p className="text-[11px] text-outline mt-0.5">You can leave anytime.</p>
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="bg-error-container/30 border border-tertiary/20 rounded-xl p-4 mt-2">
+                        <p className="text-[14px] font-medium text-on-surface mb-2">Are you sure?</p>
+                        <p className="text-[13px] text-on-surface-variant leading-relaxed mb-4">
+                          Opting out will stop all wellness tracking. Your college support team won't be able to proactively reach out. You can always opt back in.
+                        </p>
+                        <div className="flex gap-3">
+                          <button
+                            className="px-4 py-2 rounded-btn text-[13px] font-medium border border-outline-variant/50 text-on-surface hover:bg-surface-container-low transition-colors"
+                            onClick={() => setShowOptOutConfirm(false)}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className="px-4 py-2 rounded-btn text-[13px] font-medium bg-tertiary text-on-tertiary hover:opacity-90 transition-opacity"
+                            onClick={() => {
+                              setShowOptOutConfirm(false);
+                              setSuccessMsg('Opt-out request submitted. It will take effect within 24 hours.');
+                            }}
+                          >
+                            Yes, opt out
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : id === 'escalation' ? (
+                  <div className="px-md pb-md pt-0 space-y-4 relative">
+                    <div className="absolute left-[43px] top-2 bottom-4 w-px bg-surface-variant z-0" />
+                    {content.map((item, i) => (
+                      <div key={i} className="flex items-start gap-3 relative z-10 pt-3">
+                        <div className="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center shrink-0 mt-0.5 border-2 border-white">
+                          <span className="text-[11px] font-medium text-on-surface">{item.icon}</span>
+                        </div>
+                        <div>
+                          <p className="text-[14px] font-medium text-on-surface">{item.label}</p>
+                          <p className="text-[12px] text-outline mt-0.5">{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="px-md pb-md pt-0 space-y-4">
+                    {content.map((item, i) => (
+                      <div key={i} className="flex items-start gap-3 pt-3">
+                        <span
+                          className="material-symbols-outlined text-primary/70 mt-0.5 text-[20px]"
+                          style={item.filled ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                        >
+                          {item.icon}
+                        </span>
+                        <div>
+                          <p className="text-[14px] font-medium text-on-surface">{item.label}</p>
+                          <p className="text-[11px] text-outline mt-0.5">{item.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="pt-xl pb-lg text-center px-4">
+        <p className="text-[13px] text-on-surface-variant">
+          Questions?{' '}
+          <a href="#" className="underline underline-offset-2 decoration-outline-variant hover:text-primary transition-colors">
+            Reach your college's StudentWell manager.
+          </a>
+        </p>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useApi } from '../../hooks/useApi';
 import { apiCall } from '../../lib/api';
-import { Plus, Edit2, Check, X } from 'lucide-react';
 
 interface Counsellor {
   id: string;
@@ -46,27 +45,35 @@ const AddCounsellorForm: React.FC<{ onSuccess: () => void; onCancel: () => void 
     }
   };
 
-  const fieldStyle: React.CSSProperties = {
-    width: '100%', background: 'var(--surface-raised)', border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-md)', padding: '9px 12px', color: 'var(--text)',
-    fontSize: 13, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 10,
-  };
+  const inputClass = "w-full bg-surface-container-low border border-outline-variant rounded-input px-3 py-2.5 text-on-surface text-[14px] font-sans focus:outline-none focus:border-primary transition-colors";
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border-focus)', borderRadius: 'var(--radius-lg)', padding: 20, marginBottom: 20 }}>
-      <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Add New Counsellor</h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-        <input style={fieldStyle} placeholder="Full name *" value={form.full_name} onChange={set('full_name')} />
-        <input style={fieldStyle} placeholder="Email address *" type="email" value={form.email} onChange={set('email')} />
-        <input style={fieldStyle} placeholder="Phone" value={form.phone} onChange={set('phone')} />
-        <input style={fieldStyle} placeholder="Capacity limit" type="number" value={form.capacity_limit} onChange={set('capacity_limit')} />
+    <div className="bg-surface-container-lowest border border-primary/20 rounded-2xl p-lg mb-xl shadow-warm">
+      <h3 className="text-[15px] font-medium text-on-surface mb-4">Add New Counsellor</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <input className={inputClass} placeholder="Full name *" value={form.full_name} onChange={set('full_name')} />
+        <input className={inputClass} placeholder="Email address *" type="email" value={form.email} onChange={set('email')} />
+        <input className={inputClass} placeholder="Phone" value={form.phone} onChange={set('phone')} />
+        <input className={inputClass} placeholder="Capacity limit" type="number" value={form.capacity_limit} onChange={set('capacity_limit')} />
       </div>
-      <input style={fieldStyle} placeholder="Specialisation tags (comma-separated, e.g. anxiety, academic)" value={form.tags} onChange={set('tags')} />
-      <textarea style={{ ...fieldStyle, minHeight: 70, resize: 'vertical' }} placeholder="Personality / approach description" value={form.personality_description} onChange={set('personality_description')} />
-      {err && <p style={{ fontSize: 12, color: '#f97316', marginBottom: 8 }}>{err}</p>}
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button className="btn btn-ghost" onClick={onCancel} disabled={saving}>Cancel</button>
-        <button className="btn btn-primary" onClick={handleSubmit} disabled={saving}>{saving ? 'Creating…' : 'Create Counsellor'}</button>
+      <input className={`${inputClass} mb-3`} placeholder="Specialisation tags (comma-separated, e.g. anxiety, academic)" value={form.tags} onChange={set('tags')} />
+      <textarea className={`${inputClass} min-h-[70px] resize-y mb-3`} placeholder="Personality / approach description" value={form.personality_description} onChange={set('personality_description')} />
+      {err && <p className="text-[12px] text-on-error-container mb-3">{err}</p>}
+      <div className="flex gap-3 justify-end">
+        <button
+          onClick={onCancel}
+          disabled={saving}
+          className="px-4 py-2 rounded-btn border border-outline-variant text-on-surface-variant text-[14px] font-medium hover:bg-surface-container transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={saving}
+          className="px-4 py-2 rounded-btn bg-primary text-on-primary text-[14px] font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          {saving ? 'Creating…' : 'Create Counsellor'}
+        </button>
       </div>
     </div>
   );
@@ -97,33 +104,47 @@ const EditInline: React.FC<{ counsellor: Counsellor; onDone: () => void }> = ({ 
     } catch { /* ignore */ } finally { setSaving(false); }
   };
 
-  const inputStyle: React.CSSProperties = {
-    background: 'var(--surface-raised)', border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-sm)', padding: '6px 10px', color: 'var(--text)',
-    fontSize: 12, fontFamily: 'inherit', width: '100%', boxSizing: 'border-box', marginBottom: 8,
-  };
+  const inputClass = "w-full bg-surface-container-low border border-outline-variant rounded-input px-2.5 py-1.5 text-on-surface text-[12px] font-sans focus:outline-none focus:border-primary transition-colors mb-2";
 
   return (
-    <div style={{ marginTop: 10 }}>
-      <input style={inputStyle} placeholder="Tags (comma-separated)" value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} />
-      <textarea style={{ ...inputStyle, minHeight: 60, resize: 'vertical' }} placeholder="Description" value={form.personality_description} onChange={e => setForm(f => ({ ...f, personality_description: e.target.value }))} />
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8 }}>
-        <input style={{ ...inputStyle, width: 80, marginBottom: 0 }} type="number" placeholder="Capacity" value={form.capacity_limit} onChange={e => setForm(f => ({ ...f, capacity_limit: e.target.value }))} />
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, cursor: 'pointer' }}>
-          <input type="checkbox" checked={form.is_on_leave} onChange={e => setForm(f => ({ ...f, is_on_leave: e.target.checked }))} />
+    <div className="mt-3 pt-3 border-t border-custom-divider/50">
+      <input className={inputClass} placeholder="Tags (comma-separated)" value={form.tags} onChange={e => setForm(f => ({ ...f, tags: e.target.value }))} />
+      <textarea className={`${inputClass} min-h-[56px] resize-y`} placeholder="Description" value={form.personality_description} onChange={e => setForm(f => ({ ...f, personality_description: e.target.value }))} />
+      <div className="flex items-center gap-3 mb-2">
+        <input
+          className="w-20 bg-surface-container-low border border-outline-variant rounded-input px-2.5 py-1.5 text-on-surface text-[12px] font-sans focus:outline-none focus:border-primary"
+          type="number" placeholder="Capacity" value={form.capacity_limit} onChange={e => setForm(f => ({ ...f, capacity_limit: e.target.value }))}
+        />
+        <label className="flex items-center gap-1.5 text-[12px] text-on-surface-variant cursor-pointer">
+          <input type="checkbox" checked={form.is_on_leave} onChange={e => setForm(f => ({ ...f, is_on_leave: e.target.checked }))} className="accent-primary" />
           On Leave
         </label>
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving} style={{ padding: '5px 12px', fontSize: 12 }}>
-          <Check size={12} /> {saving ? 'Saving…' : 'Save'}
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-3 py-1.5 rounded-btn bg-primary text-on-primary text-[12px] font-medium flex items-center gap-1 hover:bg-primary/90 transition-colors disabled:opacity-50"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>check</span>
+          {saving ? 'Saving…' : 'Save'}
         </button>
-        <button className="btn btn-ghost btn-sm" onClick={onDone} style={{ padding: '5px 12px', fontSize: 12 }}>
-          <X size={12} /> Cancel
+        <button
+          onClick={onDone}
+          className="px-3 py-1.5 rounded-btn border border-outline-variant text-on-surface-variant text-[12px] font-medium flex items-center gap-1 hover:bg-surface-container transition-colors"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>close</span>
+          Cancel
         </button>
       </div>
     </div>
   );
+};
+
+const statusBadge = (c: Counsellor) => {
+  if (c.is_on_leave) return { label: 'On Leave', cls: 'bg-tertiary-fixed text-tertiary border border-tertiary-fixed-dim/50' };
+  if (c.current_caseload_count >= c.capacity_limit) return { label: 'At Capacity', cls: 'bg-surface-variant text-on-surface-variant border border-outline-variant/30' };
+  return { label: 'Available', cls: 'bg-primary-fixed/50 text-primary border border-primary/20' };
 };
 
 export const CounsellorPage: React.FC = () => {
@@ -133,82 +154,147 @@ export const CounsellorPage: React.FC = () => {
   const counsellors = data || [];
 
   return (
-    <div className="fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+    <div className="px-8 py-8 max-w-[1200px] mx-auto">
+      {/* Header */}
+      <div className="flex items-end justify-between mb-xl">
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>Counsellors</h1>
-          <p style={{ color: 'var(--text-3)', fontSize: 13 }}>{counsellors.length} registered</p>
+          <h1 className="text-[22px] font-light text-on-surface mb-1">Counsellors</h1>
+          <p className="text-[13px] text-on-surface-variant">{counsellors.length} registered</p>
         </div>
-        <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-          onClick={() => setShowAdd(v => !v)}>
-          <Plus size={16} /> Add Counsellor
+        <button
+          onClick={() => setShowAdd(v => !v)}
+          className="flex items-center gap-xs px-md py-2 rounded-xl bg-primary text-on-primary text-[14px] font-medium hover:bg-primary/90 transition-colors"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>add</span>
+          Add Counsellor
         </button>
       </div>
 
-      {showAdd && <AddCounsellorForm onSuccess={() => { setShowAdd(false); refetch(); }} onCancel={() => setShowAdd(false)} />}
+      {showAdd && (
+        <AddCounsellorForm
+          onSuccess={() => { setShowAdd(false); refetch(); }}
+          onCancel={() => setShowAdd(false)}
+        />
+      )}
 
-      {isLoading
-        ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-            {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 180, borderRadius: 12 }} />)}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-xl">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-52 rounded-2xl bg-surface-container animate-pulse" />
+          ))}
+        </div>
+      ) : counsellors.length === 0 ? (
+        <div className="bg-surface-container-lowest border border-dashed border-outline-variant rounded-2xl p-xl flex flex-col items-center justify-center gap-3">
+          <div className="w-12 h-12 rounded-full bg-primary-fixed/30 text-primary flex items-center justify-center">
+            <span className="material-symbols-outlined">person_add</span>
           </div>
-        : counsellors.length === 0
-          ? <p style={{ color: 'var(--text-3)', fontSize: 13 }}>No counsellors yet. Add one above.</p>
-          : (
-            <div className="mgr-counsellor-grid">
-              {counsellors.map(c => (
-                <div key={c.id} className={`counsellor-card${c.is_on_leave ? ' on-leave' : ''}`}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 36, height: 36, borderRadius: '50%', background: 'var(--sage-light)',
-                        color: 'var(--sage)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontWeight: 800, fontSize: 14, flexShrink: 0,
-                      }}>{c.full_name.charAt(0)}</div>
-                      <div>
-                        <div className="counsellor-card-name">{c.full_name}</div>
-                        {c.is_on_leave && <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>ON LEAVE</span>}
-                      </div>
+          <p className="text-on-surface-variant text-[14px]">No counsellors yet. Add one above.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-xl">
+          {counsellors.map(c => {
+            const badge = statusBadge(c);
+            const caseloadPct = Math.min(100, (c.current_caseload_count / c.capacity_limit) * 100);
+            const initials = c.full_name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+            return (
+              <div
+                key={c.id}
+                className={`bg-surface-container-lowest rounded-2xl p-md shadow-warm flex flex-col gap-md ${c.is_on_leave ? 'opacity-80' : ''}`}
+              >
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-md">
+                    <div className="w-[56px] h-[56px] rounded-full bg-gradient-to-br from-primary-fixed to-secondary-fixed flex items-center justify-center text-on-surface text-[18px] font-medium flex-shrink-0">
+                      {initials}
                     </div>
-                    <button className="mgr-logout-btn" onClick={() => setEditing(editing === c.id ? null : c.id)}>
-                      <Edit2 size={14} />
-                    </button>
+                    <div>
+                      <h3 className="text-[15px] font-medium text-on-surface">{c.full_name}</h3>
+                      <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-label-caps text-[11px] font-medium ${badge.cls}`}>
+                        {badge.label}
+                      </span>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setEditing(editing === c.id ? null : c.id)}
+                    className="p-1 text-on-surface-variant hover:text-on-surface transition-colors"
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>more_vert</span>
+                  </button>
+                </div>
 
-                  {c.personality_description && (
-                    <p className="counsellor-card-desc">{c.personality_description}</p>
-                  )}
+                {/* Specialisation tags */}
+                {c.specialisation_tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {c.specialisation_tags.map(t => (
+                      <span key={t} className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant text-[11px] border border-surface-variant/50">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
-                  {/* Capacity */}
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Caseload</span>
-                    <span style={{ fontWeight: 600, color: c.current_caseload_count >= c.capacity_limit ? '#f97316' : 'var(--text)' }}>
-                      {c.current_caseload_count} / {c.capacity_limit}
+                {/* Description */}
+                {c.personality_description && (
+                  <div className="bg-surface-container-low rounded-lg p-3 border border-surface-variant/30">
+                    <p className="text-[13px] italic text-on-surface-variant leading-relaxed">"{c.personality_description}"</p>
+                  </div>
+                )}
+
+                {/* Capacity bar */}
+                <div className="flex flex-col gap-1 mt-auto">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[13px] text-on-surface-variant">Caseload</span>
+                    <span className={`text-label-caps text-[11px] ${c.current_caseload_count >= c.capacity_limit ? 'text-on-error-container' : 'text-on-surface-variant'}`}>
+                      {c.current_caseload_count} / {c.capacity_limit} students
                     </span>
                   </div>
-                  <div className="counsellor-capacity-bar">
-                    <div className="counsellor-capacity-fill" style={{
-                      width: `${Math.min(100, (c.current_caseload_count / c.capacity_limit) * 100)}%`,
-                      background: c.current_caseload_count >= c.capacity_limit ? '#f97316' : 'var(--sage)',
-                    }} />
+                  <div className="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${c.current_caseload_count >= c.capacity_limit ? 'bg-outline' : 'bg-primary-container'}`}
+                      style={{ width: `${caseloadPct}%` }}
+                    />
                   </div>
-
-                  {/* Tags */}
-                  {c.specialisation_tags?.length > 0 && (
-                    <div className="counsellor-pick-tags" style={{ marginTop: 8 }}>
-                      {c.specialisation_tags.map(t => <span key={t} className="tag-chip">{t}</span>)}
-                    </div>
-                  )}
-
-                  {/* Inline edit */}
-                  {editing === c.id && (
-                    <EditInline counsellor={c} onDone={() => { setEditing(null); refetch(); }} />
-                  )}
                 </div>
-              ))}
+
+                <div className="h-px w-full bg-surface-variant/50" />
+
+                {/* Footer actions */}
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setEditing(editing === c.id ? null : c.id)}
+                    className="text-[13px] text-secondary px-3 py-1.5 rounded-lg border border-surface-variant/50 hover:bg-surface-container-low transition-colors font-medium"
+                  >
+                    Edit
+                  </button>
+                  <button className={`text-[13px] font-medium transition-colors ${c.is_on_leave ? 'text-on-surface-variant cursor-not-allowed' : 'text-primary hover:text-primary/80'}`}>
+                    View students
+                  </button>
+                </div>
+
+                {/* Inline edit */}
+                {editing === c.id && (
+                  <EditInline counsellor={c} onDone={() => { setEditing(null); refetch(); }} />
+                )}
+              </div>
+            );
+          })}
+
+          {/* Add placeholder card */}
+          {!showAdd && (
+            <div
+              onClick={() => setShowAdd(true)}
+              className="bg-surface-container-lowest border border-dashed border-outline-variant rounded-2xl p-md flex items-center justify-center cursor-pointer hover:bg-surface-container-low transition-colors group min-h-[200px]"
+            >
+              <div className="flex flex-col items-center gap-xs py-xl">
+                <div className="w-12 h-12 rounded-full bg-primary-fixed/30 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <span className="material-symbols-outlined">person_add</span>
+                </div>
+                <span className="text-[14px] text-on-surface-variant">Add new counsellor</span>
+              </div>
             </div>
-          )
-      }
+          )}
+        </div>
+      )}
     </div>
   );
 };

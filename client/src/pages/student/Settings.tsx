@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { apiCall } from '../../lib/api';
-import { Bell, Globe, Clock, Save } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface Preferences {
   checkin_day: string;
@@ -19,6 +20,8 @@ const LANGUAGES = [{ code: 'en', label: 'English' }, { code: 'hi', label: 'ह�
 
 export const SettingsPage: React.FC = () => {
   const { data, isLoading } = useApi<{ preferences: Preferences }>('/api/student/preferences');
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -47,128 +50,172 @@ export const SettingsPage: React.FC = () => {
     setIsSaving(false);
   };
 
-  const Section: React.FC<{ icon: React.ElementType; title: string; children: React.ReactNode }> = ({ icon: Icon, title, children }) => (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <Icon size={16} style={{ color: 'var(--sage)' }} />
-        <span className="section-title">{title}</span>
-      </div>
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-        {children}
-      </div>
-    </div>
-  );
-
-  const SettingRow: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 0', borderBottom: '1px solid var(--border-subtle)' }}>
-      <span style={{ fontSize: 14 }}>{label}</span>
-      {children}
-    </div>
-  );
+  const initials = user?.full_name
+    ? user.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'SW';
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {[1, 2, 3].map((i) => <div key={i} className="skeleton" style={{ height: 140, borderRadius: 'var(--radius-lg)' }} />)}
+      <div className="flex flex-col gap-5 pb-8">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-[140px] rounded-[18px] bg-surface-container-high animate-pulse" />
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>Settings</h1>
-        <p style={{ color: 'var(--text-3)', fontSize: 14 }}>Personalise your experience</p>
+    <div className="flex flex-col gap-xl pb-8">
+      {/* Profile Section */}
+      <section className="flex flex-col items-center text-center pt-2">
+        <div className="w-[60px] h-[60px] rounded-full bg-gradient-to-br from-primary-container to-primary flex items-center justify-center text-on-primary text-xl font-medium shadow-warm mb-4">
+          {initials}
+        </div>
+        <h2 className="text-[17px] font-medium text-on-surface mb-1">{user?.full_name || 'Student'}</h2>
+        <p className="text-[13px] text-outline mb-3">Student</p>
+      </section>
+
+      {/* Settings Groups */}
+      <div className="space-y-6">
+        {/* Check-in Preferences */}
+        <section>
+          <h3 className="font-label-caps text-label-caps text-outline mb-2 px-2">CHECK-IN PREFERENCES</h3>
+          <div className="bg-surface-container-lowest rounded-[18px] shadow-warm overflow-hidden">
+            {/* Delivery */}
+            <div className="w-full flex items-center justify-between px-4 h-12 hover:bg-surface-container-low transition-colors">
+              <span className="text-[14px] text-on-surface font-medium">Delivery</span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={current?.delivery_method || 'in_app'}
+                  onChange={(e) => update('delivery_method', e.target.value)}
+                  className="text-[14px] text-outline bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {DELIVERY.map((d) => <option key={d} value={d}>{DELIVERY_LABELS[d]}</option>)}
+                </select>
+                <span className="material-symbols-outlined text-[20px] text-outline">chevron_right</span>
+              </div>
+            </div>
+            <div className="h-px w-full bg-surface-variant" />
+            {/* Day */}
+            <div className="w-full flex items-center justify-between px-4 h-12 hover:bg-surface-container-low transition-colors">
+              <span className="text-[14px] text-on-surface font-medium">Day</span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={current?.checkin_day || 'Monday'}
+                  onChange={(e) => update('checkin_day', e.target.value)}
+                  className="text-[14px] text-outline bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <span className="material-symbols-outlined text-[20px] text-outline">chevron_right</span>
+              </div>
+            </div>
+            <div className="h-px w-full bg-surface-variant" />
+            {/* Time */}
+            <div className="w-full flex items-center justify-between px-4 h-12 hover:bg-surface-container-low transition-colors">
+              <span className="text-[14px] text-on-surface font-medium">Time</span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={current?.checkin_time || '18:00'}
+                  onChange={(e) => update('checkin_time', e.target.value)}
+                  className="text-[14px] text-outline bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <span className="material-symbols-outlined text-[20px] text-outline">chevron_right</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Notifications */}
+        <section>
+          <h3 className="font-label-caps text-label-caps text-outline mb-2 px-2">NOTIFICATIONS</h3>
+          <div className="bg-surface-container-lowest rounded-[18px] shadow-warm overflow-hidden">
+            <div className="w-full flex items-center justify-between px-4 h-12 hover:bg-surface-container-low transition-colors">
+              <span className="text-[14px] text-on-surface font-medium">Weekly reminder</span>
+              <button
+                onClick={() => update('notifications_enabled', !(current?.notifications_enabled ?? true))}
+                className={`relative inline-flex h-6 w-11 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${(current?.notifications_enabled ?? true) ? 'bg-primary-container' : 'bg-surface-variant'}`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${(current?.notifications_enabled ?? true) ? 'translate-x-5' : 'translate-x-0'}`}
+                />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Appearance */}
+        <section>
+          <h3 className="font-label-caps text-label-caps text-outline mb-2 px-2">APPEARANCE</h3>
+          <div className="bg-surface-container-lowest rounded-[18px] shadow-warm overflow-hidden">
+            <div className="w-full flex items-center justify-between px-4 h-12 hover:bg-surface-container-low transition-colors">
+              <span className="text-[14px] text-on-surface font-medium">Language</span>
+              <div className="flex items-center gap-2">
+                <select
+                  value={current?.language || 'en'}
+                  onChange={(e) => update('language', e.target.value)}
+                  className="text-[14px] text-outline bg-transparent border-none outline-none cursor-pointer"
+                >
+                  {LANGUAGES.map(({ code, label }) => (
+                    <option key={code} value={code}>{label}</option>
+                  ))}
+                </select>
+                <span className="material-symbols-outlined text-[20px] text-outline">chevron_right</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Account */}
+        <section>
+          <h3 className="font-label-caps text-label-caps text-outline mb-2 px-2">ACCOUNT</h3>
+          <div className="bg-surface-container-lowest rounded-[18px] shadow-warm overflow-hidden">
+            <button
+              className="w-full flex items-center justify-between px-4 h-12 hover:bg-surface-container-low transition-colors text-left group"
+              onClick={() => alert('Password reset: Coming soon')}
+            >
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-outline text-[20px]">lock</span>
+                <span className="text-[14px] text-on-surface font-medium">Change password</span>
+              </div>
+              <span className="material-symbols-outlined text-outline text-[20px] group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </button>
+            <div className="h-px w-full bg-surface-variant" />
+            <button
+              className="w-full flex items-center justify-between px-4 h-12 hover:bg-surface-container-low transition-colors text-left group"
+              onClick={() => navigate('/student/privacy')}
+            >
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary text-[20px]">shield</span>
+                <span className="text-[14px] text-primary font-medium">Privacy settings</span>
+              </div>
+              <span className="material-symbols-outlined text-outline text-[20px] group-hover:translate-x-1 transition-transform">chevron_right</span>
+            </button>
+            <div className="h-px w-full bg-surface-variant" />
+            <button
+              className="w-full flex items-center justify-between px-4 h-12 hover:bg-error-container transition-colors text-left group"
+              onClick={() => { logout(); navigate('/login'); }}
+            >
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-tertiary text-[20px]">logout</span>
+                <span className="text-[14px] text-tertiary font-medium">Sign out</span>
+              </div>
+            </button>
+          </div>
+        </section>
       </div>
 
-      <Section icon={Clock} title="Check-in Preferences">
-        <SettingRow label="Reminder day">
-          <select
-            value={current?.checkin_day || 'Monday'}
-            onChange={(e) => update('checkin_day', e.target.value)}
-            style={{ width: 130 }}
-          >
-            {DAYS.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </SettingRow>
-        <SettingRow label="Reminder time">
-          <select
-            value={current?.checkin_time || '18:00'}
-            onChange={(e) => update('checkin_time', e.target.value)}
-            style={{ width: 130 }}
-          >
-            {TIMES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </SettingRow>
-        <SettingRow label="Delivery method">
-          <select
-            value={current?.delivery_method || 'in_app'}
-            onChange={(e) => update('delivery_method', e.target.value)}
-            style={{ width: 130 }}
-          >
-            {DELIVERY.map((d) => <option key={d} value={d}>{DELIVERY_LABELS[d]}</option>)}
-          </select>
-        </SettingRow>
-      </Section>
-
-      <Section icon={Globe} title="Language">
-        <div style={{ display: 'flex', gap: 10, padding: '14px 0' }}>
-          {LANGUAGES.map(({ code, label }) => (
-            <button
-              key={code}
-              onClick={() => update('language', code)}
-              className={`btn btn-sm ${current?.language === code ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ flex: 1 }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </Section>
-
-      <Section icon={Bell} title="Notifications">
-        <SettingRow label="Enable notifications">
-          <button
-            onClick={() => update('notifications_enabled', !(current?.notifications_enabled ?? true))}
-            style={{
-              width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: (current?.notifications_enabled ?? true) ? 'var(--sage)' : 'var(--surface-raised)',
-              position: 'relative', transition: 'background 0.2s'
-            }}
-          >
-            <div style={{
-              width: 18, height: 18, borderRadius: '50%', background: '#fff',
-              position: 'absolute', top: 3,
-              left: (current?.notifications_enabled ?? true) ? 23 : 3,
-              transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
-            }} />
-          </button>
-        </SettingRow>
-      </Section>
-
+      {/* Save button */}
       <button
-        className="btn btn-primary btn-full"
+        className="w-full h-[48px] bg-primary-container text-on-primary rounded-btn font-body-md hover:bg-primary transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
         onClick={save}
         disabled={isSaving || !prefs}
-        style={{ opacity: !prefs ? 0.5 : 1 }}
       >
-        <Save size={16} />
+        <span className="material-symbols-outlined text-[18px]">save</span>
         {isSaving ? 'Saving...' : saved ? 'Saved ✓' : 'Save Changes'}
       </button>
-
-      <div className="divider" />
-
-      <div className="card" style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 12 }}>
-          To change your password, you'll be redirected to a secure page.
-        </p>
-        <button
-          className="btn btn-secondary btn-full"
-          onClick={() => alert('Password reset: Coming soon')}
-        >
-          Change Password
-        </button>
-      </div>
     </div>
   );
 };
