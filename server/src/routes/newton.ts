@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { encryptToken } from '../utils/encryption';
 import { fetchNewtonData, syncStudent } from '../services/newton/newtonSync';
+import { newtonGetMe, NewtonAuthError } from '../services/newton/newtonRestClient';
 import { daysUntilExpiry, isTokenExpiringSoon } from '../utils/newtonTokenExpiry';
 import { newtonSyncLimiter } from '../middleware/rateLimiters';
 import { logger } from '../lib/logger';
@@ -35,16 +36,19 @@ router.post('/connect', async (req: Request, res: Response): Promise<void> => {
   const studentId = req.user!.id;
   const tenantId = req.user!.tenant_id;
 
-  // Verify token works before storing
+  // Verify token works before storing — newtonGetMe is the cheap dedicated check;
+  // fetchNewtonData would also throw, but a profile call gives a clearer 401 signal.
   let newtonData: Awaited<ReturnType<typeof fetchNewtonData>>;
   try {
+    await newtonGetMe(access_token);
     newtonData = await fetchNewtonData(access_token);
   } catch (err: any) {
     // Token is invalid — do not create any DB rows
-    res.status(400).json({
-      error:
-        "We couldn't connect to your Newton account with that token. Make sure you copied the full access_token value from credentials.json.",
-    });
+    const userMessage =
+      err instanceof NewtonAuthError
+        ? 'That token is invalid or expired. Please run `npx @newtonschool/newton-mcp@latest login` again and paste the new access_token.'
+        : "We couldn't connect to your Newton account with that token. Make sure you copied the full access_token value from credentials.json.";
+    res.status(400).json({ error: userMessage });
     return;
   }
 

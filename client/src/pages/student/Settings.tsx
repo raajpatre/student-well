@@ -1,31 +1,52 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { apiCall } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 
-// Newton connection state persisted in localStorage so it survives refreshes
-const NEWTON_KEY = 'sw_newton_linked';
+interface NewtonStatus {
+  connected: boolean;
+  course_name?: string;
+  last_sync_at?: string | null;
+  last_sync_status?: string | null;
+  expires_at?: number | null;
+  days_until_expiry?: number | null;
+  expiring_soon?: boolean;
+  attendance_pct?: number | null;
+  assignment_completion_pct?: number | null;
+}
 
 function useNewtonLink() {
-  const [linked, setLinked] = useState(() => localStorage.getItem(NEWTON_KEY) === 'true');
-  const [username, setUsername] = useState(() => localStorage.getItem(NEWTON_KEY + '_user') || '');
+  const [status, setStatus] = useState<NewtonStatus>({ connected: false });
+  const [loading, setLoading] = useState(true);
 
-  const link = (user: string) => {
-    localStorage.setItem(NEWTON_KEY, 'true');
-    localStorage.setItem(NEWTON_KEY + '_user', user);
-    setLinked(true);
-    setUsername(user);
+  const refresh = useCallback(async () => {
+    try {
+      const next = await apiCall<NewtonStatus>('/api/student/newton/status');
+      setStatus(next);
+    } catch {
+      setStatus({ connected: false });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  const connect = async (accessToken: string, expiresAt?: number) => {
+    await apiCall('/api/student/newton/connect', {
+      method: 'POST',
+      body: expiresAt ? { access_token: accessToken, expires_at: expiresAt } : { access_token: accessToken },
+    });
+    await refresh();
   };
 
-  const unlink = () => {
-    localStorage.removeItem(NEWTON_KEY);
-    localStorage.removeItem(NEWTON_KEY + '_user');
-    setLinked(false);
-    setUsername('');
+  const disconnect = async () => {
+    await apiCall('/api/student/newton/disconnect', { method: 'DELETE' });
+    setStatus({ connected: false });
   };
 
-  return { linked, username, link, unlink };
+  return { status, loading, connect, disconnect, refresh };
 }
 
 interface Preferences {
@@ -55,6 +76,7 @@ export const SettingsPage: React.FC = () => {
   const [showNewtonModal, setShowNewtonModal] = useState(false);
   const [newtonInput, setNewtonInput] = useState('');
   const [newtonError, setNewtonError] = useState('');
+  const [newtonConnecting, setNewtonConnecting] = useState(false);
 
   const current = prefs || data?.preferences;
 
@@ -210,13 +232,17 @@ export const SettingsPage: React.FC = () => {
                 <div className="flex flex-col">
                   <span className="text-[14px] text-on-surface font-medium leading-tight">Newton</span>
                   <span className="text-[12px] text-outline mt-0.5">
-                    {newton.linked ? `Connected as ${newton.username}` : 'Academic platform — not connected'}
+                    {newton.loading
+                      ? 'Checking…'
+                      : newton.status.connected
+                        ? `Connected — ${newton.status.course_name ?? 'course'}`
+                        : 'Academic platform — not connected'}
                   </span>
                 </div>
               </div>
-              {newton.linked ? (
+              {newton.status.connected ? (
                 <button
-                  onClick={newton.unlink}
+                  onClick={() => { void newton.disconnect(); }}
                   className="text-[13px] text-tertiary font-medium px-3 py-1.5 rounded-btn hover:bg-error-container/40 transition-colors"
                 >
                   Disconnect
@@ -307,16 +333,20 @@ export const SettingsPage: React.FC = () => {
               </button>
             </div>
 
-            <p className="text-[13px] text-on-surface-variant mb-4 leading-relaxed">
-              Enter your Newton username so StudentWell can pull your academic schedule and course data.
-            </p>
+            <ol className="text-[12px] text-on-surface-variant mb-4 leading-relaxed list-decimal pl-4 space-y-1">
+              <li>In your terminal, run <code className="px-1 rounded bg-surface-container-low">npx @newtonschool/newton-mcp@latest login</code></li>
+              <li>Open <code className="px-1 rounded bg-surface-container-low">~/.newton-mcp/credentials.json</code></li>
+              <li>Copy the <code className="px-1 rounded bg-surface-container-low">access_token</code> value and paste it below.</li>
+            </ol>
 
             <input
-              type="text"
-              placeholder="Newton username or roll number"
+              type="password"
+              placeholder="Paste your access_token"
               value={newtonInput}
               onChange={(e) => { setNewtonInput(e.target.value); setNewtonError(''); }}
-              className="w-full h-[44px] bg-background border border-custom-divider rounded-input px-4 text-[14px] text-on-surface placeholder:text-outline focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors mb-2"
+              autoComplete="off"
+              spellCheck={false}
+              className="w-full h-[44px] bg-background border border-custom-divider rounded-input px-4 text-[14px] text-on-surface placeholder:text-outline focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors mb-2 font-mono"
             />
 
             {newtonError && (
@@ -324,17 +354,27 @@ export const SettingsPage: React.FC = () => {
             )}
 
             <button
-              onClick={() => {
-                if (!newtonInput.trim()) {
-                  setNewtonError('Please enter your Newton username.');
+              disabled={newtonConnecting}
+              onClick={async () => {
+                const token = newtonInput.trim();
+                if (!token) {
+                  setNewtonError('Please paste your access_token.');
                   return;
                 }
-                newton.link(newtonInput.trim());
-                setShowNewtonModal(false);
+                setNewtonConnecting(true);
+                setNewtonError('');
+                try {
+                  await newton.connect(token);
+                  setShowNewtonModal(false);
+                } catch (err: any) {
+                  setNewtonError(err?.message ?? 'Could not connect — please try again.');
+                } finally {
+                  setNewtonConnecting(false);
+                }
               }}
-              className="w-full h-[48px] bg-primary-container text-on-primary rounded-btn font-body-md hover:bg-primary transition-colors shadow-sm mt-2"
+              className="w-full h-[48px] bg-primary-container text-on-primary rounded-btn font-body-md hover:bg-primary transition-colors shadow-sm mt-2 disabled:opacity-50"
             >
-              Link Account
+              {newtonConnecting ? 'Connecting…' : 'Connect Account'}
             </button>
           </div>
         </div>

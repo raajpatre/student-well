@@ -5,8 +5,13 @@ import { decryptToken } from '../../utils/encryption';
 import { isTokenExpired, isTokenExpiringSoon, daysUntilExpiry } from '../../utils/newtonTokenExpiry';
 import { notify } from '../notificationService';
 import { calculateAcademicStatus } from '../wellnessCalculator';
-
-const NEWTON_BASE = 'https://my.newtonschool.co';
+import {
+  newtonListCourses,
+  newtonGetCourseOverview,
+  newtonGetArenaStats,
+  pickActiveCourse,
+  NewtonAuthError,
+} from './newtonRestClient';
 
 interface NewtonData {
   courseHash: string;
@@ -22,61 +27,27 @@ interface NewtonData {
   batchSize: number;
 }
 
-async function newtonGet(path: string, accessToken: string): Promise<any> {
-  const res = await fetch(`${NEWTON_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (res.status === 401) throw new Error('Newton token invalid or expired (401)');
-  if (!res.ok) throw new Error(`Newton API error: ${res.status}`);
-  return res.json();
-}
-
 export async function fetchNewtonData(accessToken: string): Promise<NewtonData> {
-  const courses: any[] = await newtonGet(
-    '/api/v2/course/all/applied/?pagination=false&completed=false',
-    accessToken,
-  );
+  const courses = await newtonListCourses(accessToken);
+  const { hash: courseHash, title: courseName } = pickActiveCourse(courses);
 
-  if (!Array.isArray(courses) || courses.length === 0) {
-    throw new Error('No courses found in Newton account');
-  }
-
-  // NST courses nest semesters under children_courses.admin_unit_courses; use the first semester hash.
-  // Non-NST students get their first enrolled course.
-  let courseHash: string;
-  let courseName: string;
-
-  const nstCourse = courses.find(c => c.children_courses?.is_parent_admin_unit_course === true);
-  if (nstCourse) {
-    const semesters: any[] = nstCourse.children_courses?.admin_unit_courses ?? [];
-    if (semesters.length === 0) throw new Error('NST course found but no semester data available');
-    courseHash = semesters[0].hash;
-    courseName = semesters[0].title;
-  } else {
-    const enrolled = courses.find(c => c.user_status === 8);
-    if (!enrolled) throw new Error('No enrolled courses found in Newton account');
-    courseHash = enrolled.hash;
-    courseName = enrolled.title;
-  }
-
-  // Fetch performance metrics and XP concurrently
-  const [perf, xp] = await Promise.all([
-    newtonGet(`/api/v2/course/h/${courseHash}/self_performance/`, accessToken),
-    newtonGet(`/api/v2/course/h/${courseHash}/experience_points/`, accessToken),
+  const [overview, arena] = await Promise.all([
+    newtonGetCourseOverview(accessToken, courseHash),
+    newtonGetArenaStats(accessToken, courseHash),
   ]);
 
   return {
     courseHash,
     courseName,
-    lecturesAttended: perf.total_lectures_attended ?? 0,
-    lecturesTotal: perf.total_lectures ?? 0,
-    assignmentsCompleted: perf.total_completed_assignment_questions ?? 0,
-    assignmentsTotal: perf.total_assignment_questions ?? 0,
-    assessmentsCompleted: perf.total_completed_assessments ?? 0,
-    assessmentsTotal: perf.total_assessments ?? 0,
-    xpTotal: xp.total_earned_points ?? 0,
-    batchRank: xp.overall_rank ?? 0,
-    batchSize: xp.student_count ?? 0,
+    lecturesAttended: overview.total_lectures_attended ?? 0,
+    lecturesTotal: overview.total_lectures ?? 0,
+    assignmentsCompleted: overview.total_completed_assignment_questions ?? 0,
+    assignmentsTotal: overview.total_assignment_questions ?? 0,
+    assessmentsCompleted: overview.total_completed_assessments ?? 0,
+    assessmentsTotal: overview.total_assessments ?? 0,
+    xpTotal: arena.total_earned_points ?? 0,
+    batchRank: arena.overall_rank ?? 0,
+    batchSize: arena.student_count ?? 0,
   };
 }
 
@@ -165,7 +136,10 @@ export async function syncStudent(studentId: string, tenantId: string): Promise<
 
   } catch (err: any) {
     const errorMessage = (err?.message ?? 'Unknown error').slice(0, 500);
-    const isExpired = errorMessage.includes('expired') || errorMessage.includes('token_expired');
+    const isExpired =
+      err instanceof NewtonAuthError ||
+      errorMessage.includes('expired') ||
+      errorMessage.includes('token_expired');
 
     // Update credentials with failure
     await supabase
