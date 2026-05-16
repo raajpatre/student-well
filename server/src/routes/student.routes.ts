@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { getTenantId } from '../utils/tenant';
 import { validateBody } from '../middleware/validateBody';
 import { onboardingSchema, updatePreferencesSchema } from '../validators/student.validators';
+import { getAdaptiveQuestions } from '../services/wellness/adaptiveQuestionService';
 
 const router = Router();
 
@@ -281,6 +282,86 @@ router.post('/onboarding', validateBody(onboardingSchema), async (req: Request, 
     }
     res.json({ success: true });
   } catch (err: any) {
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   GET /api/student/questions/adaptive
+   Adaptive question rotation based on recent reflection indicators.
+   Returns up to 3 questions, optionally surfaced on the check-in screen.
+───────────────────────────────────────── */
+router.get('/questions/adaptive', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const userId = req.user!.id;
+    const result = await getAdaptiveQuestions(userId, tenantId, 3);
+    res.json(result);
+  } catch {
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   GET /api/student/recommendations
+   Active recommendation cards for this student.
+───────────────────────────────────────── */
+router.get('/recommendations', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const userId = req.user!.id;
+
+    const { data, error } = await supabase
+      .from('recommendations')
+      .select('id, type, priority, message, source, status, created_at')
+      .eq('student_id', userId)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+      .order('priority', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(8);
+
+    if (error) {
+      res.status(500).json({ error: 'Failed to fetch recommendations' });
+      return;
+    }
+
+    res.json({ recommendations: data ?? [] });
+  } catch {
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+/* ─────────────────────────────────────────
+   PATCH /api/student/recommendations/:id
+   Dismiss or complete a recommendation card.
+───────────────────────────────────────── */
+router.patch('/recommendations/:id', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const userId = req.user!.id;
+    const { id } = req.params;
+    const nextStatus = req.body?.status;
+
+    if (nextStatus !== 'dismissed' && nextStatus !== 'completed') {
+      res.status(400).json({ error: "status must be 'dismissed' or 'completed'" });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('recommendations')
+      .update({ status: nextStatus, dismissed_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('student_id', userId)
+      .eq('tenant_id', tenantId);
+
+    if (error) {
+      res.status(500).json({ error: 'Failed to update recommendation' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch {
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });

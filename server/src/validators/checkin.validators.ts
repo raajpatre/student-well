@@ -7,7 +7,8 @@ export const submitCheckinSchema = z.object({
   sleep_score: score.optional(),
   academic_score: score.optional(),
   social_score: score.optional(),
+  reflection_text: z.string().trim().min(1).max(2000).optional(),
 }).strict().refine(
   body => Object.values(body).some(value => value !== undefined),
-  { message: 'At least one score is required' }
+  { message: 'At least one score or a reflection is required' }
 );

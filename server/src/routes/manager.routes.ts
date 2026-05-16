@@ -781,4 +781,112 @@ router.get('/reports/semester', async (req: Request, res: Response): Promise<voi
   }
 });
 
+// ─── WELLNESS ANALYTICS (reflection-based aggregates) ────────────────────────
+// Population-level view derived from weekly_reflections + recommendations.
+// Complements /heatmap (structural by branch/batch) with sentiment data.
+router.get('/wellness-analytics', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const [reflectionsRes, recommendationsRes] = await Promise.all([
+      supabase
+        .from('weekly_reflections')
+        .select('student_id, emotional_score, severity, indicators, created_at')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', thirtyDaysAgo),
+      supabase
+        .from('recommendations')
+        .select('type, priority, status')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active'),
+    ]);
+
+    const reflections = reflectionsRes.data ?? [];
+    const recommendations = recommendationsRes.data ?? [];
+
+    // Population sentiment averages
+    const emotionalScores = reflections
+      .map((r: any) => r.emotional_score)
+      .filter((v: any): v is number => typeof v === 'number');
+    const avgEmotional =
+      emotionalScores.length > 0
+        ? Math.round(emotionalScores.reduce((a: number, b: number) => a + b, 0) / emotionalScores.length)
+        : null;
+
+    // Per-indicator averages
+    const indicatorKeys = ['stress', 'loneliness', 'exhaustion', 'motivationDecline', 'anxiety', 'sleepDecline'];
+    const indicatorTotals: Record<string, { sum: number; count: number }> = {};
+    for (const k of indicatorKeys) indicatorTotals[k] = { sum: 0, count: 0 };
+    for (const r of reflections) {
+      const ind = ((r as any).indicators ?? {}) as Record<string, number>;
+      for (const k of indicatorKeys) {
+        if (typeof ind[k] === 'number') {
+          indicatorTotals[k].sum += ind[k];
+          indicatorTotals[k].count += 1;
+        }
+      }
+    }
+    const indicatorAverages: Record<string, number | null> = {};
+    for (const k of indicatorKeys) {
+      const { sum, count } = indicatorTotals[k];
+      indicatorAverages[k] = count > 0 ? Math.round(sum / count) : null;
+    }
+
+    // Severity distribution
+    const severityDist: Record<string, number> = { Low: 0, Moderate: 0, High: 0, Critical: 0 };
+    for (const r of reflections) {
+      const sev = (r as any).severity ?? 'Low';
+      if (sev in severityDist) severityDist[sev]++;
+    }
+
+    const reflectingStudents = new Set(reflections.map((r: any) => r.student_id)).size;
+
+    // Daily emotional heatmap (last 30d)
+    const dailyMap: Record<string, { sum: number; count: number }> = {};
+    for (const r of reflections) {
+      const r2 = r as any;
+      if (typeof r2.emotional_score !== 'number' || !r2.created_at) continue;
+      const day = String(r2.created_at).slice(0, 10);
+      if (!dailyMap[day]) dailyMap[day] = { sum: 0, count: 0 };
+      dailyMap[day].sum += r2.emotional_score;
+      dailyMap[day].count += 1;
+    }
+    const emotionalHeatmap = Object.entries(dailyMap)
+      .map(([day, { sum, count }]) => ({
+        day,
+        average_emotional_score: Math.round(sum / count),
+        count,
+      }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+
+    // Active recommendation distribution
+    const recsByType: Record<string, number> = {};
+    const recsByPriority: Record<string, number> = { Low: 0, Moderate: 0, High: 0, Critical: 0 };
+    for (const rec of recommendations as any[]) {
+      recsByType[rec.type] = (recsByType[rec.type] ?? 0) + 1;
+      if (rec.priority in recsByPriority) recsByPriority[rec.priority]++;
+    }
+
+    res.json({
+      window_days: 30,
+      reflecting_students: reflectingStudents,
+      population: {
+        average_emotional_score: avgEmotional,
+        indicator_averages: indicatorAverages,
+        severity_distribution: severityDist,
+      },
+      emotional_heatmap: emotionalHeatmap,
+      active_recommendations: {
+        total: recommendations.length,
+        by_type: recsByType,
+        by_priority: recsByPriority,
+      },
+    });
+  } catch (err: any) {
+    logger.error({ err }, 'wellness-analytics failed');
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
 export default router;

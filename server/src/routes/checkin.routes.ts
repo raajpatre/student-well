@@ -7,6 +7,9 @@ import { checkinSubmitLimiter } from '../middleware/rateLimiters';
 import { validateBody } from '../middleware/validateBody';
 import { submitCheckinSchema } from '../validators/checkin.validators';
 import { logger } from '../lib/logger';
+import { analyzeSentiment } from '../services/wellness/sentimentAnalyzer';
+import { notifyManagers } from '../services/notificationService';
+import { generateRecommendationsForStudent } from '../services/wellness/recommendationService';
 
 const router = Router();
 
@@ -29,7 +32,7 @@ router.post('/submit', checkinSubmitLimiter, validateBody(submitCheckinSchema), 
     const studentId = req.user!.id;
     const weekStart = getWeekStart();
 
-    const { emotional_score, sleep_score, academic_score, social_score } = req.body;
+    const { emotional_score, sleep_score, academic_score, social_score, reflection_text } = req.body;
 
     const scoreMap: Record<string, number> = {};
     if (emotional_score !== undefined) scoreMap['emotional'] = emotional_score;
@@ -63,12 +66,108 @@ router.post('/submit', checkinSubmitLimiter, validateBody(submitCheckinSchema), 
         res.status(500).json({ error: 'Failed to submit check-in' });
         return;
       }
-      // Trigger wellness recalculation async
-      updateWellnessSignals(studentId, tenantId).catch(err => logger.error({ err, studentId }, 'Failed to update wellness signals after check-in'));
     }
 
-    res.json({ submitted: true, week_start: weekStart });
+    // Process the optional free-text reflection: persist + sentiment + distress hook.
+    let reflectionSeverity: string | null = null;
+    if (typeof reflection_text === 'string' && reflection_text.trim().length > 0) {
+      const trimmed = reflection_text.trim().slice(0, 2000);
+      const analysis = analyzeSentiment(trimmed);
+      reflectionSeverity = analysis.severity;
+
+      const { error: reflErr } = await supabase.from('weekly_reflections').upsert(
+        {
+          tenant_id: tenantId,
+          student_id: studentId,
+          week_start: weekStart,
+          reflection_text: trimmed,
+          sentiment_label: analysis.sentiment.label,
+          emotional_score: analysis.emotionalScore,
+          severity: analysis.severity,
+          indicators: analysis.indicators as unknown as object,
+          detected_keywords: analysis.detectedKeywords,
+        },
+        { onConflict: 'student_id,week_start' },
+      );
+
+      if (reflErr) {
+        logger.error({ err: reflErr, studentId }, 'Failed to persist weekly reflection');
+      } else if (analysis.severity === 'Critical' || analysis.distressDetected) {
+        // Distress signal in a check-in reflection — mirror the chatbot L2/L3 flow:
+        // create or escalate a flag, audit-log, and notify managers.
+        try {
+          const { data: existingFlags } = await supabase
+            .from('flags')
+            .select('id, status, risk_level')
+            .eq('student_id', studentId)
+            .eq('tenant_id', tenantId)
+            .in('status', ['unassigned', 'assigned', 'ongoing', 'escalated']);
+
+          let flagId: string | null = existingFlags?.[0]?.id ?? null;
+
+          if (!flagId) {
+            const { data: newFlag } = await supabase
+              .from('flags')
+              .insert({
+                tenant_id: tenantId,
+                student_id: studentId,
+                risk_level: 'high',
+                triggered_dimensions: ['emotional'],
+                status: 'unassigned',
+              })
+              .select('id')
+              .single();
+            flagId = newFlag?.id ?? null;
+          } else {
+            await supabase
+              .from('flags')
+              .update({ risk_level: 'high', updated_at: new Date().toISOString() })
+              .eq('id', flagId);
+          }
+
+          if (flagId) {
+            await supabase.from('audit_logs').insert({
+              tenant_id: tenantId,
+              actor_id: studentId,
+              action: 'reflection_distress_detected',
+              target_id: flagId,
+              metadata: {
+                source: 'checkin_reflection',
+                severity: analysis.severity,
+                distress_detected: analysis.distressDetected,
+                detected_keyword_count: analysis.detectedKeywords.length,
+              },
+            });
+          }
+
+          void notifyManagers(
+            tenantId,
+            'A student check-in reflection contains language consistent with severe distress. A high-risk flag has been raised.',
+            'escalation',
+            'whatsapp',
+          );
+
+          logger.warn({ studentId, severity: analysis.severity }, 'Reflection distress detected; flag raised');
+        } catch (err) {
+          logger.error({ err, studentId }, 'Failed to handle reflection distress signal');
+        }
+      }
+    }
+
+    // Trigger wellness recalculation + recommendations async (after both inserts).
+    if (inserts.length > 0 || reflectionSeverity !== null) {
+      updateWellnessSignals(studentId, tenantId)
+        .then(() => generateRecommendationsForStudent(studentId, tenantId))
+        .catch((err) => logger.error({ err, studentId }, 'Failed post-checkin pipeline'));
+    }
+
+    res.json({
+      submitted: true,
+      week_start: weekStart,
+      reflection_severity: reflectionSeverity,
+    });
   } catch (error: any) {
+    logger.error({ err: error }, 'checkin submit failed');
     res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });

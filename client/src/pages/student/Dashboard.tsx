@@ -1,7 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
+import { apiCall } from '../../lib/api';
 import { StatusBadge } from '../../components/student/StatusBadge';
+
+interface Recommendation {
+  id: string;
+  type: 'self-care' | 'sleep' | 'social' | 'academic-balance' | 'counseling' | 'urgent-support';
+  priority: 'Low' | 'Moderate' | 'High' | 'Critical';
+  message: string;
+  source: string;
+  created_at: string;
+}
+
+const RECOMMENDATION_ICON: Record<Recommendation['type'], string> = {
+  'self-care': 'spa',
+  sleep: 'bedtime',
+  social: 'group',
+  'academic-balance': 'school',
+  counseling: 'volunteer_activism',
+  'urgent-support': 'crisis_alert',
+};
+
+const PRIORITY_ACCENT: Record<Recommendation['priority'], string> = {
+  Low: 'border-l-primary-container',
+  Moderate: 'border-l-primary-container',
+  High: 'border-l-tertiary',
+  Critical: 'border-l-error',
+};
 
 interface WellnessSignals {
   academic_status: string | null;
@@ -95,6 +121,8 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const { data: studentInfo, isLoading: loadingInfo } = useApi<StudentInfo>('/api/student/me');
   const { data: checkinStatus, isLoading: loadingCheckin } = useApi<CheckinStatus>('/api/checkins/status');
+  const { data: recsResp } = useApi<{ recommendations: Recommendation[] }>('/api/student/recommendations');
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const signals = studentInfo?.wellness_signals;
   const hasPendingCheckin = checkinStatus?.pending;
@@ -102,6 +130,19 @@ export const DashboardPage: React.FC = () => {
     studentInfo?.counsellor_id && studentInfo?.flag_status === 'pending_contact';
 
   const isLoading = loadingInfo || loadingCheckin;
+  const visibleRecs = (recsResp?.recommendations ?? []).filter((r) => !dismissed.has(r.id));
+
+  const dismissRecommendation = async (id: string) => {
+    setDismissed((prev) => new Set(prev).add(id));
+    try {
+      await apiCall(`/api/student/recommendations/${id}`, {
+        method: 'PATCH',
+        body: { status: 'dismissed' },
+      });
+    } catch {
+      // Optimistic — leave it dismissed in the UI even if the request fails.
+    }
+  };
 
   return (
     <div className="flex flex-col gap-xl">
@@ -187,6 +228,47 @@ export const DashboardPage: React.FC = () => {
           </button>
         </div>
       </section>
+
+      {/* Section 2b: FOR YOU — actionable recommendation cards */}
+      {visibleRecs.length > 0 && (
+        <section className="w-full flex flex-col gap-4">
+          <h2 className="font-label-caps text-label-caps text-on-surface-variant tracking-widest pl-1 uppercase">
+            FOR YOU
+          </h2>
+          <div className="flex flex-col gap-3">
+            {visibleRecs.map((rec) => (
+              <div
+                key={rec.id}
+                className={`bg-surface-container-lowest rounded-2xl p-4 shadow-warm border-l-[3px] ${PRIORITY_ACCENT[rec.priority]} flex items-start gap-4`}
+              >
+                <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-1 bg-surface-container-low text-primary">
+                  <span className="material-symbols-outlined text-[20px]">
+                    {RECOMMENDATION_ICON[rec.type]}
+                  </span>
+                </div>
+                <div className="flex-1 flex flex-col gap-1">
+                  <p className="text-[14px] text-on-surface leading-relaxed">{rec.message}</p>
+                  {rec.type === 'urgent-support' && (
+                    <button
+                      onClick={() => navigate('/student/chat')}
+                      className="self-start mt-1 text-[12px] text-primary font-medium hover:underline"
+                    >
+                      Talk to someone now →
+                    </button>
+                  )}
+                </div>
+                <button
+                  aria-label="Dismiss"
+                  onClick={() => { void dismissRecommendation(rec.id); }}
+                  className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px] text-outline">close</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Section 3: YOUR PULSE TODAY */}
       <section className="w-full flex flex-col gap-4 pb-8">
