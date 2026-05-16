@@ -4,6 +4,30 @@ import { useApi } from '../../hooks/useApi';
 import { apiCall } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 
+// Newton connection state persisted in localStorage so it survives refreshes
+const NEWTON_KEY = 'sw_newton_linked';
+
+function useNewtonLink() {
+  const [linked, setLinked] = useState(() => localStorage.getItem(NEWTON_KEY) === 'true');
+  const [username, setUsername] = useState(() => localStorage.getItem(NEWTON_KEY + '_user') || '');
+
+  const link = (user: string) => {
+    localStorage.setItem(NEWTON_KEY, 'true');
+    localStorage.setItem(NEWTON_KEY + '_user', user);
+    setLinked(true);
+    setUsername(user);
+  };
+
+  const unlink = () => {
+    localStorage.removeItem(NEWTON_KEY);
+    localStorage.removeItem(NEWTON_KEY + '_user');
+    setLinked(false);
+    setUsername('');
+  };
+
+  return { linked, username, link, unlink };
+}
+
 interface Preferences {
   checkin_day: string;
   checkin_time: string;
@@ -25,6 +49,12 @@ export const SettingsPage: React.FC = () => {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Newton integration
+  const newton = useNewtonLink();
+  const [showNewtonModal, setShowNewtonModal] = useState(false);
+  const [newtonInput, setNewtonInput] = useState('');
+  const [newtonError, setNewtonError] = useState('');
 
   const current = prefs || data?.preferences;
 
@@ -168,6 +198,41 @@ export const SettingsPage: React.FC = () => {
           </div>
         </section>
 
+        {/* Connected Apps */}
+        <section>
+          <h3 className="font-label-caps text-label-caps text-outline mb-2 px-2">CONNECTED APPS</h3>
+          <div className="bg-surface-container-lowest rounded-[18px] shadow-warm overflow-hidden">
+            <div className="w-full flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-indigo-light flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[20px] text-primary">school</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[14px] text-on-surface font-medium leading-tight">Newton</span>
+                  <span className="text-[12px] text-outline mt-0.5">
+                    {newton.linked ? `Connected as ${newton.username}` : 'Academic platform — not connected'}
+                  </span>
+                </div>
+              </div>
+              {newton.linked ? (
+                <button
+                  onClick={newton.unlink}
+                  className="text-[13px] text-tertiary font-medium px-3 py-1.5 rounded-btn hover:bg-error-container/40 transition-colors"
+                >
+                  Disconnect
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setNewtonInput(''); setNewtonError(''); setShowNewtonModal(true); }}
+                  className="text-[13px] text-primary font-medium px-3 py-1.5 rounded-btn bg-primary-fixed hover:bg-primary-fixed-dim transition-colors"
+                >
+                  Connect
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Account */}
         <section>
           <h3 className="font-label-caps text-label-caps text-outline mb-2 px-2">ACCOUNT</h3>
@@ -216,6 +281,64 @@ export const SettingsPage: React.FC = () => {
         <span className="material-symbols-outlined text-[18px]">save</span>
         {isSaving ? 'Saving...' : saved ? 'Saved ✓' : 'Save Changes'}
       </button>
+
+      {/* Newton Connect Modal */}
+      {showNewtonModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-on-surface/30 backdrop-blur-sm"
+            onClick={() => setShowNewtonModal(false)}
+          />
+          {/* Sheet */}
+          <div className="relative w-full max-w-lg bg-surface-container-lowest rounded-t-[24px] p-6 shadow-warm-glow">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-indigo-light flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[18px] text-primary">school</span>
+                </div>
+                <h3 className="text-[17px] font-medium text-on-surface">Connect Newton</h3>
+              </div>
+              <button
+                onClick={() => setShowNewtonModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors"
+              >
+                <span className="material-symbols-outlined text-[20px] text-outline">close</span>
+              </button>
+            </div>
+
+            <p className="text-[13px] text-on-surface-variant mb-4 leading-relaxed">
+              Enter your Newton username so StudentWell can pull your academic schedule and course data.
+            </p>
+
+            <input
+              type="text"
+              placeholder="Newton username or roll number"
+              value={newtonInput}
+              onChange={(e) => { setNewtonInput(e.target.value); setNewtonError(''); }}
+              className="w-full h-[44px] bg-background border border-custom-divider rounded-input px-4 text-[14px] text-on-surface placeholder:text-outline focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-colors mb-2"
+            />
+
+            {newtonError && (
+              <p className="text-[12px] text-on-error-container mb-3">{newtonError}</p>
+            )}
+
+            <button
+              onClick={() => {
+                if (!newtonInput.trim()) {
+                  setNewtonError('Please enter your Newton username.');
+                  return;
+                }
+                newton.link(newtonInput.trim());
+                setShowNewtonModal(false);
+              }}
+              className="w-full h-[48px] bg-primary-container text-on-primary rounded-btn font-body-md hover:bg-primary transition-colors shadow-sm mt-2"
+            >
+              Link Account
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

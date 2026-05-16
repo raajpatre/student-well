@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
@@ -10,13 +10,7 @@ const navItems = [
 ];
 
 export const StudentLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const { user } = useAuth();
 
   const firstName = user?.full_name?.split(' ')[0] || 'Student';
   const initial = (user?.full_name?.[0] || 'S').toUpperCase();
@@ -34,13 +28,13 @@ export const StudentLayout: React.FC<{ children: React.ReactNode }> = ({ childre
             <span className="text-[11px] text-on-surface-variant mt-0.5">Student</span>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-warm hover:opacity-80 transition-opacity"
-          title="Notifications / Logout"
+        {/* Notifications — non-interactive placeholder until notification system is built */}
+        <div
+          className="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-warm"
+          title="Notifications"
         >
-          <span className="material-symbols-outlined text-[20px] text-primary">notifications</span>
-        </button>
+          <span className="material-symbols-outlined text-[20px] text-outline">notifications</span>
+        </div>
       </header>
 
       {/* Main content */}
