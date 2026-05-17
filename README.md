@@ -130,15 +130,26 @@ Open http://localhost:5173.
 
 ## Tests
 
-There are no automated unit tests yet. There are three runnable smoke scripts that exercise the core pure functions:
+```bash
+npm run test                            # 64 unit tests via vitest, ~200ms
+npm run test --workspace=server -- --watch   # watch mode
+```
+
+Tests live under `server/tests/` and cover the three pure functions at the core of the system:
+
+- `sentimentAnalyzer.test.ts` — lexicon hits, severity bands, distress detection, score clamping.
+- `dropoutRiskService.test.ts` — every factor, every band, snapshot trend behaviour.
+- `escalationDetector.test.ts` — L1/L2/L3 trigger regexes, cross-level invariants.
+
+Three additional smoke scripts under `scripts/` exercise the same surfaces end-to-end:
 
 ```bash
-npx tsx scripts/test-sentiment.ts       # sentiment analyzer
-npx tsx scripts/test-dropout-risk.ts    # dropout-risk scoring
+npx tsx scripts/test-sentiment.ts       # prints per-input analyzer output
+npx tsx scripts/test-dropout-risk.ts    # prints per-case factor breakdown
 npx tsx scripts/test-newton-client.ts   # requires ~/.newton-mcp/credentials.json
 ```
 
-The dropout-risk script needs `SUPABASE_URL`, `ENCRYPTION_KEY`, etc. set (because of transitive imports) — any valid-shape stub values work since it never hits the DB.
+CI runs `npm run typecheck && npm run test && npm run build` on every PR — see [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ---
 

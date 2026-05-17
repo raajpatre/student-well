@@ -25,6 +25,9 @@ jobs:
       - name: Typecheck (server + client)
         run: npm run typecheck
 
+      - name: Test (server unit tests)
+        run: npm run test
+
       - name: Build (server + client)
         run: npm run build
 

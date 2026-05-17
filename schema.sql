@@ -275,3 +275,112 @@ CREATE POLICY "Managers read all audit logs in tenant" ON public.audit_logs FOR 
 -- notifications
 CREATE POLICY "Users read own notifications" ON public.notifications FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY "Users update own notifications" ON public.notifications FOR UPDATE USING (user_id = auth.uid());
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- Live-deployment additions
+--
+-- These columns and tables were added against the live database during
+-- iterative development and are now considered part of the baseline schema.
+-- Everything below is additive, idempotent, and safe to re-run. Newer features
+-- continue to live as numbered migrations under migrations/.
+-- ────────────────────────────────────────────────────────────────────────────
+
+-- wellness_signals: per-dimension score + suggestion + updated_at
+ALTER TABLE public.wellness_signals
+  ADD COLUMN IF NOT EXISTS academic_score integer,
+  ADD COLUMN IF NOT EXISTS emotional_score integer,
+  ADD COLUMN IF NOT EXISTS social_score integer,
+  ADD COLUMN IF NOT EXISTS academic_suggestion text,
+  ADD COLUMN IF NOT EXISTS emotional_suggestion text,
+  ADD COLUMN IF NOT EXISTS social_suggestion text,
+  ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+
+-- lms_data: current academic state per student (Newton sync target)
+CREATE TABLE IF NOT EXISTS public.lms_data (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES public.colleges(id) ON DELETE CASCADE,
+  student_id uuid NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
+  source text NOT NULL DEFAULT 'newton_mcp',
+  attendance_pct numeric(5,2),
+  assignment_completion_pct numeric(5,2),
+  assessments_completed integer,
+  assessments_total integer,
+  lectures_attended integer,
+  lectures_total integer,
+  xp_total integer,
+  batch_rank integer,
+  batch_size integer,
+  raw_data jsonb,
+  synced_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.lms_data ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Students read own lms_data" ON public.lms_data;
+CREATE POLICY "Students read own lms_data"
+  ON public.lms_data FOR SELECT
+  USING (student_id = auth.uid() AND tenant_id = get_auth_user_tenant());
+
+DROP POLICY IF EXISTS "Managers read all lms_data" ON public.lms_data;
+CREATE POLICY "Managers read all lms_data"
+  ON public.lms_data FOR SELECT
+  USING (get_auth_user_role() = 'manager' AND tenant_id = get_auth_user_tenant());
+
+DROP POLICY IF EXISTS "Counsellors read assigned lms_data" ON public.lms_data;
+CREATE POLICY "Counsellors read assigned lms_data"
+  ON public.lms_data FOR SELECT
+  USING (
+    get_auth_user_role() = 'counsellor'
+    AND tenant_id = get_auth_user_tenant()
+    AND student_id IN (
+      SELECT student_id FROM public.counsellor_assignments WHERE counsellor_id = auth.uid()
+    )
+  );
+
+-- newton_credentials: encrypted Newton token per student
+CREATE TABLE IF NOT EXISTS public.newton_credentials (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES public.colleges(id) ON DELETE CASCADE,
+  student_id uuid NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
+  encrypted_token text NOT NULL,
+  expires_at bigint,
+  newton_course_hash text,
+  newton_course_name text,
+  newton_student_count integer,
+  connected_at timestamptz DEFAULT now(),
+  last_sync_at timestamptz,
+  last_sync_status text,
+  last_sync_error text
+);
+
+ALTER TABLE public.newton_credentials ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Students rw own newton_credentials" ON public.newton_credentials;
+CREATE POLICY "Students rw own newton_credentials"
+  ON public.newton_credentials FOR ALL
+  USING (student_id = auth.uid() AND tenant_id = get_auth_user_tenant());
+
+DROP POLICY IF EXISTS "Managers read newton sync status" ON public.newton_credentials;
+CREATE POLICY "Managers read newton sync status"
+  ON public.newton_credentials FOR SELECT
+  USING (get_auth_user_role() = 'manager' AND tenant_id = get_auth_user_tenant());
+
+-- user_preferences: weekly check-in cadence, delivery channel, language
+CREATE TABLE IF NOT EXISTS public.user_preferences (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES public.colleges(id) ON DELETE CASCADE,
+  student_id uuid NOT NULL UNIQUE REFERENCES public.users(id) ON DELETE CASCADE,
+  checkin_day integer DEFAULT 1,
+  checkin_time time DEFAULT '18:00:00',
+  delivery_preference text DEFAULT 'in_app',
+  language text DEFAULT 'en',
+  notifications_enabled boolean DEFAULT true,
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Students rw own preferences" ON public.user_preferences;
+CREATE POLICY "Students rw own preferences"
+  ON public.user_preferences FOR ALL
+  USING (student_id = auth.uid() AND tenant_id = get_auth_user_tenant());

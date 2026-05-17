@@ -3,32 +3,35 @@ import { supabase } from '../lib/supabase';
 import { logger } from '../lib/logger';
 import { notifyManagers } from './notificationService';
 
-// Regex patterns for detecting escalation levels
-const L3_TRIGGERS = [
+// Regex patterns for detecting escalation levels.
+// Exported so the pure pattern set can be unit-tested without spinning up
+// the full DB-touching detectEscalation flow.
+
+export const L3_TRIGGERS = [
   /i('m| am) going to hurt myself/i,
   /i have a plan (to|for)/i,
   /kill myself/i,
   /end my life/i,
-  /suicide/i
+  /suicide/i,
 ];
 
-const L2_TRIGGERS = [
+export const L2_TRIGGERS = [
   /cut(ting)? myself/i,
   /hurt(ing)? myself/i,
   /i want to disappear/i,
   /nobody would miss me/i,
   /what(')?s the point/i,
   /not wanting to be alive/i,
-  /better off dead/i
+  /better off dead/i,
 ];
 
-const L1_TRIGGERS = [
+export const L1_TRIGGERS = [
   /overwhelmed/i,
   /hopeless/i,
   /exhausted/i,
   /can(')?t do this anymore/i,
   /falling apart/i,
-  /giving up/i
+  /giving up/i,
 ];
 
 export async function detectEscalation(
