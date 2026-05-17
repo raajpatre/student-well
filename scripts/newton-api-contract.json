@@ -1,0 +1,124 @@
+{
+  "generated_at": "2026-05-16T04:35:07.032Z",
+  "base_url": "https://my.newtonschool.co",
+  "endpoints": {
+    "get_me": {
+      "method": "GET",
+      "path": "/api/v1/user/me",
+      "status": 200,
+      "response_shape": {
+        "username": "string",
+        "uid": "string",
+        "first_name": "string",
+        "last_name": "string",
+        "avatar": "string",
+        "bio": "string",
+        "email": "string",
+        "is_email_verified": "boolean",
+        "phone": "string",
+        "is_phone_verified": "boolean",
+        "show_only_my_tracks": "boolean",
+        "hide_timestamps": "boolean",
+        "athena_versions": {
+          "__type": "array",
+          "length": 1,
+          "sample": "string"
+        },
+        "heimdall_versions": {
+          "__type": "array",
+          "length": 1,
+          "sample": "string"
+        }
+      }
+    },
+    "list_courses": {
+      "method": "GET",
+      "path": "/api/v2/course/all/applied/?pagination=false&completed=false",
+      "status": 200,
+      "response_shape": {
+        "__type": "array",
+        "length": 4,
+        "sample": {
+          "hash": "string",
+          "title": "string",
+          "course_structure": {
+            "title": "string",
+            "slug": "string",
+            "master_class_course_structure": "null"
+          },
+          "start_timestamp": "number",
+          "end_timestamp": "number",
+          "description": "string",
+          "apply_form": {
+            "apply_timestamp": "null",
+            "skip_if_course_user_mapping_exists": "boolean"
+          },
+          "status": "number",
+          "status_text": "string",
+          "eligibility": "number",
+          "eligibility_text": "string",
+          "user_status": "number",
+          "user_status_text": "string",
+          "user_status_background_color": "string",
+          "direct_link_to_course_detail": "boolean",
+          "course_type": "number",
+          "course_type_text": "string",
+          "competition_details": "null",
+          "theme": "null",
+          "starting_soon": "boolean",
+          "topic_template": "null",
+          "unit_type": "null",
+          "homepage_thumbnail": "null",
+          "homepage_thumbnail_display_url": "null",
+          "children_courses": {},
+          "completed": "boolean",
+          "course_structure_type": "number",
+          "short_display_name": "null",
+          "allow_fixed_questions": "null",
+          "is_elective": "boolean"
+        }
+      }
+    },
+    "get_course_overview": {
+      "method": "GET",
+      "path": "/api/v2/course/h/{course_hash}/self_performance/",
+      "status": 200,
+      "response_shape": {
+        "total_lectures": "number",
+        "total_lectures_attended": "number",
+        "total_assignment_questions": "number",
+        "total_completed_assignment_questions": "number",
+        "total_contest_questions": "number",
+        "total_completed_contest_questions": "number",
+        "total_assessments": "number",
+        "total_completed_assessments": "number",
+        "total_contest_assessments": "number",
+        "total_completed_contest_assessments": "number"
+      }
+    },
+    "get_arena_stats": {
+      "method": "GET",
+      "path": "/api/v2/course/h/{course_hash}/experience_points/",
+      "status": 200,
+      "response_shape": {
+        "is_xp_enabled": "boolean",
+        "total_earned_points": "number",
+        "total_earned_points_current_month": "number",
+        "is_unlocked": "boolean",
+        "is_unlocked_for_current_month": "boolean",
+        "points_required_to_unlock": "number",
+        "points_required_to_unlock_monthly_xp": "number",
+        "monthly_rank": "null",
+        "overall_rank": "null",
+        "student_count": "number"
+      }
+    }
+  },
+  "failures": {
+    "get_subject_progress": {
+      "path": "/api/v2/course/h/ocpr627rea6n/subject_progress/ | /api/v2/course/h/ocpr627rea6n/subjects/ | /api/v2/course/h/ocpr627rea6n/progress/ | /api/v2/course/ocpr627rea6n/subject_progress",
+      "status": 404,
+      "note": "no candidate returned 200"
+    }
+  }
+}

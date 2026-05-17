@@ -46,7 +46,9 @@ app.use('/api/manager', authMiddleware, requireRole('manager'), managerRoutes);
 app.use('/api/counsellor', authMiddleware, requireRole('counsellor'), counsellorRoutes);
 app.use('/api/student', authMiddleware, requireRole('student'), studentRoutes);
 app.use('/api/checkins', authMiddleware, requireRole('student'), checkinRoutes);
-app.use('/api/chat', chatRoutes);
+// Defense in depth: chat.routes.ts also applies authMiddleware + studentOnly internally,
+// but we mount with explicit guards here so the protection survives any future refactor.
+app.use('/api/chat', authMiddleware, requireRole('student'), chatRoutes);
 app.use('/api/spaces', authMiddleware, requireRole('student'), spacesRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
 app.use('/api/student/newton', authMiddleware, requireRole('student'), newtonStudentRouter);

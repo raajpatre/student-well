@@ -1,13 +1,22 @@
 {
-  "name": "server",
+  "name": "@studentwell/server",
   "version": "1.0.0",
+  "description": "StudentWell API — Express + TypeScript + Supabase. Multi-tenant student wellness backend.",
   "main": "src/index.ts",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write \"src/**/*.ts\""
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
@@ -32,9 +41,11 @@
     "@types/node": "^20.12.7",
     "@types/node-cron": "^3.0.11",
     "@types/papaparse": "^5.5.2",
+    "@vitest/coverage-v8": "^4.1.6",
     "eslint": "^8.57.0",
     "prettier": "^3.2.5",
     "tsx": "^4.7.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.6"
   }
 }
