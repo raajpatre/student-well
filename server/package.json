@@ -1,11 +1,17 @@
 {
-  "name": "server",
+  "name": "@studentwell/server",
   "version": "1.0.0",
+  "description": "StudentWell API — Express + TypeScript + Supabase. Multi-tenant student wellness backend.",
   "main": "src/index.ts",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write \"src/**/*.ts\""
   },

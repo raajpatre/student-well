@@ -1,6 +1,44 @@
+# dependencies & build output
 node_modules
 dist
-.env*
+build
+coverage
+
+# env files (templates are kept)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
 !.env.example
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# OS / IDE noise
 .DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+
+# editor / harness state
 .claude
+.cursor
+.aider*
+
+# Discovery / probe artifacts may contain real account data.
+# Re-generate locally with `npx tsx scripts/discover-newton-api.ts`.
+scripts/newton-api-probe-log.json
+scripts/newton-api-contract.local.json
+
+# misc
+*.swp
+*.tmp
+.vercel
+.next
