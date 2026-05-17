@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
 import { decryptToken } from '../../utils/encryption';
 import { isTokenExpired, isTokenExpiringSoon, daysUntilExpiry } from '../../utils/newtonTokenExpiry';
-import { notify } from '../notificationService';
+import { notify, notifyManagers } from '../notificationService';
 import { calculateAcademicStatus } from '../wellnessCalculator';
 import {
   newtonListCourses,
@@ -12,6 +12,7 @@ import {
   pickActiveCourse,
   NewtonAuthError,
 } from './newtonRestClient';
+import { recomputeDropoutRiskForStudent } from '../wellness/dropoutRiskService';
 
 interface NewtonData {
   courseHash: string;
@@ -88,7 +89,7 @@ export async function syncStudent(studentId: string, tenantId: string): Promise<
       ? (data.assignmentsCompleted / data.assignmentsTotal) * 100
       : 0;
 
-    // f. Upsert lms_data
+    // f. Upsert lms_data (current state)
     await supabase.from('lms_data').upsert({
       student_id: studentId,
       tenant_id: tenantId,
@@ -106,8 +107,111 @@ export async function syncStudent(studentId: string, tenantId: string): Promise<
       synced_at: now,
     }, { onConflict: 'student_id' });
 
+    // f2. Append-only snapshot for trend analysis. Failures here must not
+    // break the sync — risk-trend factors degrade gracefully when data is
+    // sparse.
+    void supabase.from('lms_snapshots').insert({
+      student_id: studentId,
+      tenant_id: tenantId,
+      source: 'newton_mcp',
+      attendance_pct: Math.round(attendancePct * 100) / 100,
+      assignment_completion_pct: Math.round(assignmentPct * 100) / 100,
+      assessments_completed: data.assessmentsCompleted,
+      assessments_total: data.assessmentsTotal,
+      lectures_attended: data.lecturesAttended,
+      lectures_total: data.lecturesTotal,
+      xp_total: data.xpTotal,
+      batch_rank: data.batchRank,
+      batch_size: data.batchSize,
+      captured_at: now,
+    });
+
     // g. Recalculate wellness academic status
     await calculateAcademicStatus(studentId, tenantId);
+
+    // g2. Recompute dropout risk + escalate via the flag system if the
+    // newly-computed level crossed into high/critical. Managers see the
+    // numeric score; students see only the existing wellness_signals.
+    try {
+      const prevRiskRes = await supabase
+        .from('lms_data')
+        .select('dropout_risk_level')
+        .eq('student_id', studentId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle();
+      const prevLevel = (prevRiskRes.data?.dropout_risk_level ?? null) as
+        | 'low' | 'medium' | 'high' | 'critical' | null;
+
+      const risk = await recomputeDropoutRiskForStudent(studentId, tenantId);
+
+      if (
+        risk &&
+        (risk.riskLevel === 'high' || risk.riskLevel === 'critical') &&
+        prevLevel !== risk.riskLevel
+      ) {
+        // Raise / update a flag — reuse existing flags table semantics.
+        const { data: existingFlags } = await supabase
+          .from('flags')
+          .select('id, status')
+          .eq('student_id', studentId)
+          .eq('tenant_id', tenantId)
+          .in('status', ['unassigned', 'assigned', 'ongoing', 'escalated']);
+
+        let flagId: string | null = existingFlags?.[0]?.id ?? null;
+
+        if (!flagId) {
+          const { data: newFlag } = await supabase
+            .from('flags')
+            .insert({
+              tenant_id: tenantId,
+              student_id: studentId,
+              risk_level: risk.riskLevel === 'critical' ? 'high' : 'medium',
+              triggered_dimensions: ['academic'],
+              status: 'unassigned',
+            })
+            .select('id')
+            .single();
+          flagId = newFlag?.id ?? null;
+        } else {
+          await supabase
+            .from('flags')
+            .update({
+              risk_level: risk.riskLevel === 'critical' ? 'high' : 'medium',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', flagId);
+        }
+
+        if (flagId) {
+          await supabase.from('audit_logs').insert({
+            tenant_id: tenantId,
+            actor_id: studentId,
+            action: 'dropout_risk_escalation',
+            target_id: flagId,
+            metadata: {
+              source: 'newton_sync',
+              new_level: risk.riskLevel,
+              previous_level: prevLevel,
+              risk_score: risk.riskScore,
+            },
+          });
+        }
+
+        void notifyManagers(
+          tenantId,
+          `A student's dropout risk has moved to ${risk.riskLevel} (score ${risk.riskScore}/100). Review the academic flag.`,
+          'dropout_risk',
+          'in_app',
+        );
+
+        logger.warn(
+          { studentId, level: risk.riskLevel, score: risk.riskScore },
+          'Dropout risk crossed escalation threshold',
+        );
+      }
+    } catch (err) {
+      logger.error({ err, studentId }, 'Dropout risk recompute / escalation failed');
+    }
 
     // h. Update credentials row
     await supabase

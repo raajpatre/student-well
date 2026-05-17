@@ -889,4 +889,134 @@ router.get('/wellness-analytics', async (req: Request, res: Response): Promise<v
   }
 });
 
+// ─── DROPOUT RISK — single student ──────────────────────────────────────────
+// Returns the full risk profile with factor breakdown. Manager-only.
+router.get('/risk/:studentId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const { studentId } = req.params;
+
+    const [userRes, lmsRes, snapsRes] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, full_name, roll_number, branch, batch')
+        .eq('id', studentId)
+        .eq('tenant_id', tenantId)
+        .single(),
+      supabase
+        .from('lms_data')
+        .select(
+          'attendance_pct, assignment_completion_pct, assessments_completed, assessments_total, lectures_attended, lectures_total, xp_total, batch_rank, batch_size, dropout_risk_score, dropout_risk_level, dropout_risk_factors, dropout_risk_computed_at, synced_at',
+        )
+        .eq('student_id', studentId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle(),
+      supabase
+        .from('lms_snapshots')
+        .select('attendance_pct, assignment_completion_pct, assessments_completed, assessments_total, captured_at')
+        .eq('student_id', studentId)
+        .eq('tenant_id', tenantId)
+        .order('captured_at', { ascending: false })
+        .limit(12),
+    ]);
+
+    if (userRes.error || !userRes.data) {
+      res.status(404).json({ error: 'Student not found' });
+      return;
+    }
+
+    res.json({
+      student: userRes.data,
+      lms: lmsRes.data,
+      snapshots: (snapsRes.data ?? []).slice().reverse(), // oldest-first for charts
+    });
+  } catch (err: any) {
+    logger.error({ err }, 'GET /risk/:studentId failed');
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// ─── DROPOUT RISK — cohort ranking ──────────────────────────────────────────
+// Ranks all students in the tenant by current dropout_risk_score (desc).
+// Supports optional ?branch=, ?batch=, ?min_level=high filters.
+router.get('/cohort-risk', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const { branch, batch, min_level } = req.query;
+
+    // 1. Fetch lms_data rows with a non-null risk score in this tenant
+    let lmsQuery = supabase
+      .from('lms_data')
+      .select(
+        'student_id, attendance_pct, assignment_completion_pct, dropout_risk_score, dropout_risk_level, dropout_risk_computed_at',
+      )
+      .eq('tenant_id', tenantId)
+      .not('dropout_risk_score', 'is', null);
+
+    const levelRanking: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+    if (typeof min_level === 'string' && min_level in levelRanking) {
+      const allowed = Object.entries(levelRanking)
+        .filter(([, rank]) => rank >= levelRanking[min_level])
+        .map(([lvl]) => lvl);
+      lmsQuery = lmsQuery.in('dropout_risk_level', allowed);
+    }
+
+    const { data: lmsRows, error: lmsErr } = await lmsQuery;
+    if (lmsErr) {
+      res.status(500).json({ error: 'Failed to fetch risk data' });
+      return;
+    }
+
+    if (!lmsRows || lmsRows.length === 0) {
+      res.json({ cohort: [], count: 0 });
+      return;
+    }
+
+    // 2. Join with users for name/branch/batch (and apply filters there)
+    const studentIds = lmsRows.map((r: any) => r.student_id);
+    let usersQuery = supabase
+      .from('users')
+      .select('id, full_name, roll_number, branch, batch')
+      .eq('tenant_id', tenantId)
+      .eq('role', 'student')
+      .eq('is_active', true)
+      .in('id', studentIds);
+
+    if (typeof branch === 'string' && branch.length > 0) {
+      usersQuery = usersQuery.eq('branch', branch);
+    }
+    if (typeof batch === 'string' && batch.length > 0) {
+      usersQuery = usersQuery.eq('batch', batch);
+    }
+
+    const { data: users } = await usersQuery;
+    const usersById = new Map((users ?? []).map((u: any) => [u.id, u]));
+
+    const cohort = lmsRows
+      .map((r: any) => {
+        const u = usersById.get(r.student_id);
+        if (!u) return null;
+        return {
+          student_id: r.student_id,
+          full_name: u.full_name,
+          roll_number: u.roll_number,
+          branch: u.branch,
+          batch: u.batch,
+          attendance_pct: r.attendance_pct,
+          assignment_completion_pct: r.assignment_completion_pct,
+          dropout_risk_score: r.dropout_risk_score,
+          dropout_risk_level: r.dropout_risk_level,
+          dropout_risk_computed_at: r.dropout_risk_computed_at,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .sort((a, b) => (b.dropout_risk_score ?? 0) - (a.dropout_risk_score ?? 0));
+
+    res.json({ cohort, count: cohort.length });
+  } catch (err: any) {
+    logger.error({ err }, 'GET /cohort-risk failed');
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
 export default router;
