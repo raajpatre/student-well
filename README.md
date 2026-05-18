@@ -134,7 +134,7 @@ student-well/
 - Node.js ≥ 20
 - A Supabase project (free tier is fine)
 - A Google Gemini API key
-- *(optional)* A Newton School account to test the academic-sync flow
+- *(MANDATORY)* A Newton School account to test the academic-sync flow
 
 ### 1. Clone and install
 
