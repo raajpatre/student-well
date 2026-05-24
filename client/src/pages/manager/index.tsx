@@ -6,6 +6,7 @@ import { StudentsPage } from './Students';
 import { CounsellorPage } from './Counsellors';
 import { InterventionsPage } from './Interventions';
 import { ReportsPage } from './Reports';
+import { OnboardStudents } from './OnboardStudents';
 
 export const ManagerPortalRouter: React.FC = () => {
   return (
@@ -13,6 +14,7 @@ export const ManagerPortalRouter: React.FC = () => {
       <Routes>
         <Route path="dashboard" element={<ManagerDashboard />} />
         <Route path="students" element={<StudentsPage />} />
+        <Route path="students/onboard" element={<OnboardStudents />} />
         <Route path="counsellors" element={<CounsellorPage />} />
         <Route path="interventions" element={<InterventionsPage />} />
         <Route path="reports" element={<ReportsPage />} />

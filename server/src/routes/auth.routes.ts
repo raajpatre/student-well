@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase';
 import { authMiddleware } from '../middleware/auth';
 import { validateBody } from '../middleware/validateBody';
 import { loginLimiter } from '../middleware/rateLimiters';
-import { emptyBodySchema, loginSchema } from '../validators/auth.validators';
+import { emptyBodySchema, loginSchema, activateSchema } from '../validators/auth.validators';
+import { activationLimiter } from '../middleware/rateLimiters';
 import { logger } from '../lib/logger';
 
 const router = Router();
@@ -94,6 +95,129 @@ router.get('/me', authMiddleware, async (req: Request, res: Response): Promise<v
       onboarding_complete: prefData?.onboarding_complete || false,
     }
   });
+});
+
+// ─── ACTIVATION ENDPOINTS (public — no auth required) ────────────────────────
+
+router.get('/activate', activationLimiter, async (req: Request, res: Response): Promise<void> => {
+  const token = req.query.token as string;
+
+  if (!token) {
+    res.status(400).json({ valid: false, reason: 'not_found' });
+    return;
+  }
+
+  const { data: invite, error } = await supabase
+    .from('student_invites')
+    .select('id, email, full_name, tenant_id, batch, semester, status, expires_at')
+    .eq('invite_token', token)
+    .maybeSingle();
+
+  if (error || !invite) {
+    res.json({ valid: false, reason: 'not_found' });
+    return;
+  }
+
+  if (invite.status === 'activated') {
+    res.json({ valid: false, reason: 'already_used' });
+    return;
+  }
+
+  if (new Date(invite.expires_at) < new Date()) {
+    res.json({ valid: false, reason: 'expired' });
+    return;
+  }
+
+  if (!['pending', 'resent'].includes(invite.status)) {
+    res.json({ valid: false, reason: 'expired' });
+    return;
+  }
+
+  res.json({
+    valid: true,
+    email: invite.email,
+    full_name: invite.full_name,
+    tenant_id: invite.tenant_id,
+    batch: invite.batch,
+    semester: invite.semester,
+  });
+});
+
+router.post('/activate', activationLimiter, validateBody(activateSchema), async (req: Request, res: Response): Promise<void> => {
+  const { token, password } = req.body;
+
+  try {
+    const { data: invite, error: inviteErr } = await supabase
+      .from('student_invites')
+      .select('id, email, full_name, tenant_id, batch, semester, status, expires_at, auth_user_id')
+      .eq('invite_token', token)
+      .maybeSingle();
+
+    if (inviteErr || !invite) {
+      res.status(400).json({ error: 'Invalid activation token' });
+      return;
+    }
+
+    if (invite.status === 'activated') {
+      res.status(400).json({ error: 'This account has already been activated' });
+      return;
+    }
+
+    if (new Date(invite.expires_at) < new Date()) {
+      res.status(400).json({ error: 'This activation link has expired. Please ask your administrator to resend the invite.' });
+      return;
+    }
+
+    if (!['pending', 'resent'].includes(invite.status)) {
+      res.status(400).json({ error: 'This activation link is no longer valid' });
+      return;
+    }
+
+    if (!invite.auth_user_id) {
+      res.status(500).json({ error: 'Account setup error. Please contact your administrator.' });
+      return;
+    }
+
+    // Update Supabase Auth user password
+    const { error: passwordErr } = await supabase.auth.admin.updateUserById(invite.auth_user_id, {
+      password,
+    });
+
+    if (passwordErr) {
+      logger.error({ err: passwordErr }, 'Failed to set activation password');
+      res.status(500).json({ error: 'Failed to set password. Please try again.' });
+      return;
+    }
+
+    // Activate the user
+    await supabase
+      .from('users')
+      .update({ is_active: true })
+      .eq('id', invite.auth_user_id);
+
+    // Create user_preferences with defaults
+    await supabase.from('user_preferences').upsert({
+      student_id: invite.auth_user_id,
+      onboarding_complete: false,
+    }, { onConflict: 'student_id' });
+
+    // Mark invite as activated
+    await supabase
+      .from('student_invites')
+      .update({ status: 'activated', activated_at: new Date().toISOString() })
+      .eq('id', invite.id);
+
+    await supabase.from('audit_logs').insert({
+      tenant_id: invite.tenant_id,
+      actor_id: invite.auth_user_id,
+      action: 'student_activated',
+    });
+
+    res.json({ activated: true, role: 'student' });
+  } catch (err: any) {
+    logger.error({ err }, 'Activation error');
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 export default router;

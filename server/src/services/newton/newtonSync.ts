@@ -31,6 +31,16 @@ async function newtonGet(path: string, accessToken: string): Promise<any> {
   return res.json();
 }
 
+export async function newtonGetMe(accessToken: string): Promise<{ email: string } | null> {
+  try {
+    const profile = await newtonGet('/api/v2/user/profile/', accessToken);
+    const email = profile?.email || profile?.user?.email || profile?.data?.email || null;
+    return email ? { email } : null;
+  } catch (err) {
+    return null;
+  }
+}
+
 export async function fetchNewtonData(accessToken: string): Promise<NewtonData> {
   const courses: any[] = await newtonGet(
     '/api/v2/course/all/applied/?pagination=false&completed=false',

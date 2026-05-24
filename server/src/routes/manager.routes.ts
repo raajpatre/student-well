@@ -15,7 +15,10 @@ import {
   emptyImportBodySchema,
   reassignAssignmentSchema,
   updateCounsellorSchema,
+  inviteSingleSchema,
+  institutionSettingsSchema,
 } from '../validators/manager.validators';
+import { inviteBulkLimiter } from '../middleware/rateLimiters';
 import { logger } from '../lib/logger';
 import { notify } from '../services/notificationService';
 
@@ -207,6 +210,461 @@ router.patch('/students/:id/deactivate', validateBody(emptyManagerBodySchema), a
   });
 
   res.json({ success: true });
+});
+
+// ─── INSTITUTION SETTINGS ────────────────────────────────────────────────────
+
+router.patch('/institution/settings', validateBody(institutionSettingsSchema), async (req: Request, res: Response): Promise<void> => {
+  const tenantId = getTenantId(req);
+  const { allowed_email_domains } = req.body;
+
+  const { error } = await supabase
+    .from('colleges')
+    .update({ allowed_email_domains })
+    .eq('id', tenantId);
+
+  if (error) {
+    logger.error({ err: error, tenantId }, 'Failed to update institution settings');
+    res.status(500).json({ error: 'Failed to update institution settings' });
+    return;
+  }
+
+  await supabase.from('audit_logs').insert({
+    tenant_id: tenantId,
+    actor_id: req.user!.id,
+    action: 'update_institution_settings',
+    metadata: { allowed_email_domains },
+  });
+
+  res.json({ success: true });
+});
+
+router.get('/institution/settings', async (req: Request, res: Response): Promise<void> => {
+  const tenantId = getTenantId(req);
+
+  const { data, error } = await supabase
+    .from('colleges')
+    .select('name, allowed_email_domains')
+    .eq('id', tenantId)
+    .single();
+
+  if (error || !data) {
+    res.status(500).json({ error: 'Failed to fetch institution settings' });
+    return;
+  }
+
+  res.json({ name: data.name, allowed_email_domains: data.allowed_email_domains || [] });
+});
+
+// ─── STUDENT INVITE ENDPOINTS ─────────────────────────────────────────────────
+
+router.post('/students/invite-single', validateBody(inviteSingleSchema), async (req: Request, res: Response): Promise<void> => {
+  const tenantId = getTenantId(req);
+  const { email, full_name, roll_number, batch, semester } = req.body;
+
+  try {
+    // Check for duplicate email in this tenant
+    const { data: existingEmail } = await supabase
+      .from('student_invites')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('email', email)
+      .not('status', 'eq', 'expired')
+      .maybeSingle();
+
+    if (existingEmail) {
+      res.status(409).json({ error: 'An invite already exists for this email address' });
+      return;
+    }
+
+    // Check for duplicate roll number in this tenant
+    const { data: existingRoll } = await supabase
+      .from('student_invites')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('roll_number', roll_number)
+      .not('status', 'eq', 'expired')
+      .maybeSingle();
+
+    if (existingRoll) {
+      res.status(409).json({ error: 'An invite already exists for this roll number' });
+      return;
+    }
+
+    const invite_token = crypto.randomUUID();
+    const expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const tempPassword = crypto.randomUUID();
+
+    // Create Supabase Auth user (inactive until activated)
+    const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+    });
+
+    if (authErr) {
+      res.status(400).json({ error: `Failed to create user account: ${authErr.message}` });
+      return;
+    }
+
+    const authUserId = authData.user.id;
+
+    // Insert into users table with is_active = false
+    const { error: userErr } = await supabase.from('users').insert({
+      id: authUserId,
+      tenant_id: tenantId,
+      role: 'student',
+      full_name,
+      roll_number,
+      batch,
+      semester,
+      is_active: false,
+    });
+
+    if (userErr) {
+      await supabase.auth.admin.deleteUser(authUserId);
+      res.status(500).json({ error: `Failed to create user record: ${userErr.message}` });
+      return;
+    }
+
+    // Insert invite record
+    const { error: inviteErr } = await supabase.from('student_invites').insert({
+      tenant_id: tenantId,
+      email,
+      full_name,
+      roll_number,
+      batch,
+      semester,
+      invited_by: req.user!.id,
+      invite_token,
+      expires_at,
+      auth_user_id: authUserId,
+    });
+
+    if (inviteErr) {
+      await supabase.auth.admin.deleteUser(authUserId);
+      res.status(500).json({ error: `Failed to create invite record: ${inviteErr.message}` });
+      return;
+    }
+
+    // Send activation email via Supabase recovery link
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const { error: linkErr } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email,
+      options: { redirectTo: `${clientUrl}/activate?token=${invite_token}` },
+    });
+
+    if (linkErr) {
+      logger.error({ err: linkErr, email }, 'Failed to generate activation link');
+    }
+
+    await supabase.from('audit_logs').insert({
+      tenant_id: tenantId,
+      actor_id: req.user!.id,
+      action: 'student_invited',
+      target_id: authUserId,
+      metadata: { roll_number, batch },
+    });
+
+    res.json({ invited: true, email, expires_at });
+  } catch (err: any) {
+    logger.error({ err }, 'Student invite-single error');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/students/invite-bulk', inviteBulkLimiter, upload.single('file'), validateBody(emptyImportBodySchema), async (req: Request, res: Response): Promise<void> => {
+  const tenantId = getTenantId(req);
+
+  if (!req.file) {
+    res.status(400).json({ error: 'No CSV file provided' });
+    return;
+  }
+
+  const csvData = req.file.buffer.toString('utf-8');
+  const parsed = Papa.parse(csvData, { header: true, skipEmptyLines: true });
+
+  if (parsed.errors.length > 0) {
+    res.status(400).json({ error: 'Failed to parse CSV', details: parsed.errors });
+    return;
+  }
+
+  const rows = parsed.data as any[];
+  if (rows.length > 200) {
+    res.status(400).json({ error: 'CSV exceeds 200 row limit per upload' });
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+
+  // Pre-fetch existing invites to check duplicates
+  const { data: existingInvites } = await supabase
+    .from('student_invites')
+    .select('email, roll_number')
+    .eq('tenant_id', tenantId)
+    .not('status', 'eq', 'expired');
+
+  const existingEmails = new Set(existingInvites?.map(i => i.email) || []);
+  const existingRolls = new Set(existingInvites?.map(i => i.roll_number) || []);
+
+  const errors: { row: number; email: string; reason: string }[] = [];
+  const validRows: any[] = [];
+
+  rows.forEach((row, index) => {
+    const rowNum = index + 1;
+    const email = (row.email || '').trim();
+    const roll = (row.roll_number || '').trim();
+    if (!email || !emailRegex.test(email)) {
+      errors.push({ row: rowNum, email, reason: 'Invalid or missing email' });
+    } else if (!row.full_name || !row.full_name.trim()) {
+      errors.push({ row: rowNum, email, reason: 'Missing full_name' });
+    } else if (!roll || !alphanumericRegex.test(roll)) {
+      errors.push({ row: rowNum, email, reason: 'Missing or invalid roll_number (alphanumeric only)' });
+    } else if (!row.batch || !row.batch.trim()) {
+      errors.push({ row: rowNum, email, reason: 'Missing batch' });
+    } else if (!row.semester || isNaN(parseInt(row.semester)) || parseInt(row.semester) < 1 || parseInt(row.semester) > 8) {
+      errors.push({ row: rowNum, email, reason: 'Missing or invalid semester (must be 1–8)' });
+    } else if (existingEmails.has(email)) {
+      errors.push({ row: rowNum, email, reason: 'Email already invited' });
+    } else if (existingRolls.has(roll)) {
+      errors.push({ row: rowNum, email, reason: 'Roll number already invited' });
+    } else {
+      validRows.push({ ...row, rowNum, email, roll_number: roll });
+    }
+  });
+
+  let invited = 0;
+  let failed = errors.length;
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+
+  for (const row of validRows) {
+    try {
+      const invite_token = crypto.randomUUID();
+      const expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const tempPassword = crypto.randomUUID();
+      const { email, roll_number } = row;
+      const full_name = row.full_name.trim();
+      const batch = row.batch.trim();
+      const semester = parseInt(row.semester);
+
+      const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+        email,
+        password: tempPassword,
+        email_confirm: true,
+      });
+
+      if (authErr) {
+        failed++;
+        errors.push({ row: row.rowNum, email, reason: `Auth creation failed: ${authErr.message}` });
+        continue;
+      }
+
+      const authUserId = authData.user.id;
+
+      const { error: userErr } = await supabase.from('users').insert({
+        id: authUserId,
+        tenant_id: tenantId,
+        role: 'student',
+        full_name,
+        roll_number,
+        batch,
+        semester,
+        is_active: false,
+      });
+
+      if (userErr) {
+        await supabase.auth.admin.deleteUser(authUserId);
+        failed++;
+        errors.push({ row: row.rowNum, email, reason: `DB insertion failed: ${userErr.message}` });
+        continue;
+      }
+
+      const { error: inviteErr } = await supabase.from('student_invites').insert({
+        tenant_id: tenantId,
+        email,
+        full_name,
+        roll_number,
+        batch,
+        semester,
+        invited_by: req.user!.id,
+        invite_token,
+        expires_at,
+        auth_user_id: authUserId,
+      });
+
+      if (inviteErr) {
+        await supabase.auth.admin.deleteUser(authUserId);
+        failed++;
+        errors.push({ row: row.rowNum, email, reason: `Invite record failed: ${inviteErr.message}` });
+        continue;
+      }
+
+      await supabase.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: { redirectTo: `${clientUrl}/activate?token=${invite_token}` },
+      });
+
+      invited++;
+    } catch (rowErr: any) {
+      failed++;
+      errors.push({ row: row.rowNum, email: row.email, reason: rowErr.message || 'Unknown error' });
+    }
+  }
+
+  await supabase.from('audit_logs').insert({
+    tenant_id: tenantId,
+    actor_id: req.user!.id,
+    action: 'student_invited',
+    metadata: { total: rows.length, invited, failed },
+  });
+
+  res.json({ total: rows.length, invited, failed, errors });
+});
+
+router.get('/students/invite-status', async (req: Request, res: Response): Promise<void> => {
+  const tenantId = getTenantId(req);
+
+  const { data, error } = await supabase
+    .from('student_invites')
+    .select('id, email, full_name, roll_number, batch, semester, status, created_at, expires_at, activated_at, resend_count')
+    .eq('tenant_id', tenantId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    logger.error({ err: error }, 'Failed to fetch invite status');
+    res.status(500).json({ error: 'Failed to fetch invite status' });
+    return;
+  }
+
+  const invites = (data || []).map(i => ({
+    id: i.id,
+    email: i.email,
+    full_name: i.full_name,
+    roll_number: i.roll_number,
+    batch: i.batch,
+    semester: i.semester,
+    status: i.status,
+    invited_at: i.created_at,
+    expires_at: i.expires_at,
+    activated_at: i.activated_at,
+    resend_count: i.resend_count || 0,
+  }));
+
+  res.json({ invites });
+});
+
+router.post('/students/resend-invite/:inviteId', validateBody(emptyManagerBodySchema), async (req: Request, res: Response): Promise<void> => {
+  const tenantId = getTenantId(req);
+  const inviteId = req.params.inviteId;
+
+  const { data: invite, error: fetchErr } = await supabase
+    .from('student_invites')
+    .select('id, email, full_name, status, resend_count')
+    .eq('id', inviteId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (fetchErr || !invite) {
+    res.status(404).json({ error: 'Invite not found' });
+    return;
+  }
+
+  if (invite.status === 'activated') {
+    res.status(400).json({ error: 'This student has already activated their account' });
+    return;
+  }
+
+  if ((invite.resend_count || 0) >= 3) {
+    res.status(429).json({ error: 'Maximum resend limit (3) reached for this invite' });
+    return;
+  }
+
+  const new_token = crypto.randomUUID();
+  const new_expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { error: updateErr } = await supabase
+    .from('student_invites')
+    .update({
+      invite_token: new_token,
+      expires_at: new_expires_at,
+      status: 'resent',
+      resend_count: (invite.resend_count || 0) + 1,
+    })
+    .eq('id', inviteId)
+    .eq('tenant_id', tenantId);
+
+  if (updateErr) {
+    res.status(500).json({ error: 'Failed to update invite' });
+    return;
+  }
+
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const { error: linkErr } = await supabase.auth.admin.generateLink({
+    type: 'recovery',
+    email: invite.email,
+    options: { redirectTo: `${clientUrl}/activate?token=${new_token}` },
+  });
+
+  if (linkErr) {
+    logger.error({ err: linkErr, email: invite.email }, 'Failed to resend activation email');
+  }
+
+  await supabase.from('audit_logs').insert({
+    tenant_id: tenantId,
+    actor_id: req.user!.id,
+    action: 'invite_resent',
+    metadata: { invite_id: inviteId },
+  });
+
+  res.json({ resent: true, expires_at: new_expires_at });
+});
+
+router.delete('/students/revoke-invite/:inviteId', async (req: Request, res: Response): Promise<void> => {
+  const tenantId = getTenantId(req);
+  const inviteId = req.params.inviteId;
+
+  const { data: invite, error: fetchErr } = await supabase
+    .from('student_invites')
+    .select('id, email, auth_user_id, status')
+    .eq('id', inviteId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (fetchErr || !invite) {
+    res.status(404).json({ error: 'Invite not found' });
+    return;
+  }
+
+  const { error: updateErr } = await supabase
+    .from('student_invites')
+    .update({ status: 'expired' })
+    .eq('id', inviteId)
+    .eq('tenant_id', tenantId);
+
+  if (updateErr) {
+    res.status(500).json({ error: 'Failed to revoke invite' });
+    return;
+  }
+
+  if (invite.auth_user_id) {
+    await supabase
+      .from('users')
+      .update({ is_active: false })
+      .eq('id', invite.auth_user_id)
+      .eq('tenant_id', tenantId);
+  }
+
+  await supabase.from('audit_logs').insert({
+    tenant_id: tenantId,
+    actor_id: req.user!.id,
+    action: 'invite_revoked',
+    metadata: { invite_id: inviteId },
+  });
+
+  res.json({ revoked: true });
 });
 
 // --- COUNSELLOR ENDPOINTS ---

@@ -4,7 +4,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { encryptToken } from '../utils/encryption';
-import { fetchNewtonData, syncStudent } from '../services/newton/newtonSync';
+import { fetchNewtonData, newtonGetMe, syncStudent } from '../services/newton/newtonSync';
 import { daysUntilExpiry, isTokenExpiringSoon } from '../utils/newtonTokenExpiry';
 import { newtonSyncLimiter } from '../middleware/rateLimiters';
 import { logger } from '../lib/logger';
@@ -47,6 +47,47 @@ router.post('/connect', async (req: Request, res: Response): Promise<void> => {
     });
     return;
   }
+
+  // Fetch the student's own email from DB to compare with Newton account
+  const { data: studentUser } = await supabase
+    .from('users')
+    .select('id')
+    .eq('id', studentId)
+    .single();
+
+  // Get email via Supabase Auth (not from our users table, which doesn't store email)
+  const { data: authUserData } = await supabase.auth.admin.getUserById(studentId);
+  const studentEmail = authUserData?.user?.email;
+
+  // Check Newton account email matches student email
+  const newtonProfile = await newtonGetMe(access_token);
+  if (newtonProfile && studentEmail) {
+    const newtonEmail = newtonProfile.email.toLowerCase().trim();
+    const swEmail = studentEmail.toLowerCase().trim();
+    if (newtonEmail !== swEmail) {
+      void supabase.from('audit_logs').insert({
+        tenant_id: tenantId,
+        actor_id: studentId,
+        action: 'newton_connect_email_mismatch',
+        metadata: { attempted_newton_email: newtonEmail },
+      });
+      res.status(400).json({
+        error: 'The Newton account you connected belongs to a different email address. Please connect the Newton account that matches your StudentWell email.',
+      });
+      return;
+    }
+    void supabase.from('audit_logs').insert({
+      tenant_id: tenantId,
+      actor_id: studentId,
+      action: 'newton_connect_email_verified',
+    });
+  } else if (!newtonProfile) {
+    // Could not verify — log warning but allow (Newton profile endpoint may not exist)
+    logger.warn({ studentId }, 'Newton email verification skipped: profile endpoint unavailable');
+  }
+
+  // Suppress unused variable warning
+  void studentUser;
 
   // Encrypt before storing
   let encryptedToken: string;

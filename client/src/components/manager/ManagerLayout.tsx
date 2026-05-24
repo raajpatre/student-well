@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 const navItems = [
   { to: '/manager/dashboard', icon: 'dashboard', label: 'Dashboard' },
   { to: '/manager/students', icon: 'group', label: 'Students' },
+  { to: '/manager/students/onboard', icon: 'person_add', label: 'Onboard Students' },
   { to: '/manager/counsellors', icon: 'support_agent', label: 'Counsellors' },
   { to: '/manager/interventions', icon: 'flag', label: 'Interventions' },
   { to: '/manager/reports', icon: 'bar_chart', label: 'Reports' },

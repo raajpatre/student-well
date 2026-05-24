@@ -34,3 +34,17 @@ export const reassignAssignmentSchema = z.object({
 
 export const emptyImportBodySchema = z.object({}).passthrough();
 export const emptyManagerBodySchema = z.object({}).strict();
+
+export const inviteSingleSchema = z.object({
+  email: z.email(),
+  full_name: z.string().trim().min(1).max(120),
+  roll_number: z.string().trim().regex(/^[a-zA-Z0-9]+$/, 'Roll number must be alphanumeric only'),
+  batch: z.string().trim().min(1).max(50),
+  semester: z.number().int().min(1).max(8),
+}).strict();
+
+export const institutionSettingsSchema = z.object({
+  allowed_email_domains: z.array(
+    z.string().trim().regex(/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Invalid domain format')
+  ).max(20),
+}).strict();

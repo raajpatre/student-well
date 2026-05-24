@@ -6,7 +6,11 @@ import { apiCall } from '../lib/api';
 type LoginResponse = { token: string; user: { id: string; tenant_id: string; role: string; full_name: string } };
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => {
+    const prefill = sessionStorage.getItem('sw_prefill_email');
+    if (prefill) { sessionStorage.removeItem('sw_prefill_email'); return prefill; }
+    return '';
+  });
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -137,9 +141,12 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Footer Text */}
-        <div className="mt-8 text-center px-4">
+        <div className="mt-6 text-center px-4 space-y-3">
           <p className="text-[13px] text-outline">
-            Reach out to your college administrator<br />if you can't access your account.
+            First time here? Check your email for your<br />StudentWell activation link.
+          </p>
+          <p className="text-[13px] text-outline">
+            Can't access your account? Reach out to<br />your college administrator.
           </p>
         </div>
       </main>

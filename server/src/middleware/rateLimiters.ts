@@ -58,3 +58,21 @@ export const newtonSyncLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+export const activationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  keyGenerator: req => (req.body?.token as string) || (req.query?.token as string) || req.ip || 'unknown',
+  message: { error: 'Too many activation attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+export const inviteBulkLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  keyGenerator: req => req.user!.id,
+  message: { error: 'Too many bulk invite requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

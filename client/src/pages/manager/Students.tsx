@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
 import { apiCall } from '../../lib/api';
 import {
@@ -388,8 +389,145 @@ const SlideOver: React.FC<{
   );
 };
 
+// ─── Invite row type ──────────────────────────────────────────────────────────
+interface InviteRow {
+  id: string;
+  email: string;
+  full_name: string;
+  roll_number: string;
+  batch: string;
+  semester: number;
+  status: 'pending' | 'resent' | 'activated' | 'expired';
+  invited_at: string;
+  expires_at: string;
+  activated_at: string | null;
+  resend_count: number;
+}
+
+// ─── Invite Status Panel ──────────────────────────────────────────────────────
+const InviteStatusPanel: React.FC = () => {
+  const navigate = useNavigate();
+  const { data, isLoading, refetch } = useApi<{ invites: InviteRow[] }>('/api/manager/students/invite-status');
+  const invites = data?.invites || [];
+
+  const pending = invites.filter(i => i.status === 'pending' || i.status === 'resent');
+  const activated = invites.filter(i => i.status === 'activated');
+  const expired = invites.filter(i => i.status === 'expired');
+
+  const handleResend = async (id: string) => {
+    try {
+      await apiCall(`/api/manager/students/resend-invite/${id}`, { method: 'POST', body: {} });
+      refetch();
+    } catch (err: any) {
+      alert(err.message || 'Failed to resend');
+    }
+  };
+
+  const handleRevoke = async (id: string) => {
+    if (!confirm('Revoke this invite? The student will no longer be able to activate their account.')) return;
+    try {
+      await apiCall(`/api/manager/students/revoke-invite/${id}`, { method: 'DELETE' });
+      refetch();
+    } catch (err: any) {
+      alert(err.message || 'Failed to revoke');
+    }
+  };
+
+  const statusBadge = (status: InviteRow['status']) => {
+    if (status === 'activated') return <span className="px-2 py-0.5 rounded-full bg-primary-fixed/40 text-on-primary-fixed text-[11px] font-medium">Active</span>;
+    if (status === 'expired') return <span className="px-2 py-0.5 rounded-full bg-surface-container text-outline text-[11px] font-medium">Expired</span>;
+    if (status === 'resent') return <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[11px] font-medium">Resent</span>;
+    return <span className="px-2 py-0.5 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant text-[11px] font-medium">Pending</span>;
+  };
+
+  return (
+    <div className="px-8 py-8 max-w-[1200px] mx-auto">
+      <div className="mb-xl flex items-start justify-between">
+        <div>
+          <h1 className="text-[22px] font-light text-on-surface mb-1">Students · Pending Invites</h1>
+          <p className="text-[13px] text-on-surface-variant">
+            Total invited: {invites.length} · Activated: {activated.length} · Pending: {pending.length} · Expired: {expired.length}
+          </p>
+        </div>
+        <button
+          onClick={() => navigate('/manager/students/onboard')}
+          className="flex items-center gap-2 px-4 py-2 bg-primary-container text-on-primary rounded-btn text-[14px] font-medium hover:bg-primary transition-colors"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>person_add</span>
+          Onboard Students
+        </button>
+      </div>
+
+      <div className="bg-surface-container-lowest rounded-card shadow-warm overflow-hidden">
+        {isLoading ? (
+          <div className="py-12 text-center text-on-surface-variant text-[14px]">Loading…</div>
+        ) : invites.length === 0 ? (
+          <div className="py-16 text-center">
+            <span className="material-symbols-outlined text-outline" style={{ fontSize: '36px' }}>mail</span>
+            <p className="mt-3 font-medium text-on-surface">No invites sent yet</p>
+            <p className="text-[13px] text-on-surface-variant mt-1">Use the Onboard Students page to invite students.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[800px]">
+              <thead>
+                <tr className="border-b border-custom-divider bg-surface-container-low">
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Name</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Roll No.</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Email</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Batch</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Invited</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Expires</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Status</th>
+                  <th className="text-label-caps text-on-surface-variant py-3 px-md font-medium tracking-wider uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-[14px] text-on-surface divide-y divide-custom-divider/50">
+                {invites.map(invite => (
+                  <tr key={invite.id} className={`h-12 ${invite.status === 'expired' ? 'opacity-50' : ''}`}>
+                    <td className="px-md py-2 font-medium">{invite.full_name}</td>
+                    <td className="px-md py-2 text-on-surface-variant">{invite.roll_number}</td>
+                    <td className="px-md py-2 text-on-surface-variant">{invite.email}</td>
+                    <td className="px-md py-2 text-on-surface-variant">{invite.batch}</td>
+                    <td className="px-md py-2 text-on-surface-variant">{formatDate(invite.invited_at)}</td>
+                    <td className="px-md py-2 text-on-surface-variant">
+                      {invite.status === 'activated' ? formatDate(invite.activated_at) : formatDate(invite.expires_at)}
+                    </td>
+                    <td className="px-md py-2">{statusBadge(invite.status)}</td>
+                    <td className="px-md py-2">
+                      {invite.status !== 'activated' && invite.status !== 'expired' && (
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleResend(invite.id)}
+                            disabled={invite.resend_count >= 3}
+                            className="text-[13px] text-primary-container hover:opacity-70 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                            title={invite.resend_count >= 3 ? 'Max resends reached' : 'Resend invite'}
+                          >
+                            Resend
+                          </button>
+                          <button
+                            onClick={() => handleRevoke(invite.id)}
+                            className="text-[13px] text-custom-terracotta hover:opacity-70 transition-opacity"
+                          >
+                            Revoke
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export const StudentsPage: React.FC = () => {
+  const [pageTab, setPageTab] = useState<'flags' | 'invites'>('flags');
   const [branch, setBranch] = useState('');
   const [batch, setBatch] = useState('');
   const [riskLevel, setRiskLevel] = useState('');
@@ -415,6 +553,25 @@ export const StudentsPage: React.FC = () => {
     refetch();
   }, [refetch]);
 
+  if (pageTab === 'invites') {
+    return (
+      <>
+        {/* Tab bar */}
+        <div className="px-8 pt-8 max-w-[1200px] mx-auto">
+          <div className="flex gap-1 mb-lg bg-surface-container-low rounded-full p-1 w-fit">
+            <button onClick={() => setPageTab('flags')} className="px-5 py-2 rounded-full text-[13px] font-medium text-outline hover:text-on-surface-variant transition-colors">
+              At-Risk List
+            </button>
+            <button onClick={() => setPageTab('invites')} className="px-5 py-2 rounded-full text-[13px] font-medium bg-surface-container-lowest text-on-surface shadow-sm transition-colors">
+              Pending Invites
+            </button>
+          </div>
+        </div>
+        <InviteStatusPanel />
+      </>
+    );
+  }
+
   return (
     <div className="px-8 py-8 max-w-[1200px] mx-auto">
       {/* Header */}
@@ -423,6 +580,16 @@ export const StudentsPage: React.FC = () => {
         <p className="text-[13px] text-on-surface-variant">
           {flags.length} student{flags.length !== 1 ? 's' : ''} flagged · sorted by priority
         </p>
+      </div>
+
+      {/* Tab toggle */}
+      <div className="flex gap-1 mb-lg bg-surface-container-low rounded-full p-1 w-fit">
+        <button onClick={() => setPageTab('flags')} className="px-5 py-2 rounded-full text-[13px] font-medium bg-surface-container-lowest text-on-surface shadow-sm transition-colors">
+          At-Risk List
+        </button>
+        <button onClick={() => setPageTab('invites')} className="px-5 py-2 rounded-full text-[13px] font-medium text-outline hover:text-on-surface-variant transition-colors">
+          Pending Invites
+        </button>
       </div>
 
       {/* Filters */}

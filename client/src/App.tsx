@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
+import { ActivatePage } from './pages/ActivatePage';
 import { StudentPortalRouter } from './pages/student/index';
 import { CounsellorPortal, ManagerPortal, UnauthorizedPage } from './pages/Portals';
 import './index.css';
@@ -12,6 +13,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/activate" element={<ActivatePage />} />
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
           <Route
