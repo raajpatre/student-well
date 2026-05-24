@@ -4,7 +4,8 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { supabase } from '../lib/supabase';
 import { encryptToken } from '../utils/encryption';
-import { fetchNewtonData, newtonGetMe, syncStudent } from '../services/newton/newtonSync';
+import { fetchNewtonData, syncStudent } from '../services/newton/newtonSync';
+import { newtonGetMe, NewtonAuthError } from '../services/newton/newtonRestClient';
 import { daysUntilExpiry, isTokenExpiringSoon } from '../utils/newtonTokenExpiry';
 import { newtonSyncLimiter } from '../middleware/rateLimiters';
 import { logger } from '../lib/logger';
@@ -35,34 +36,29 @@ router.post('/connect', async (req: Request, res: Response): Promise<void> => {
   const studentId = req.user!.id;
   const tenantId = req.user!.tenant_id;
 
-  // Verify token works before storing
+  // Verify token works — newtonGetMe is a cheap dedicated check before the heavier fetchNewtonData.
+  // Its return value is also used for email cross-verification (Part D).
+  let newtonMe: Awaited<ReturnType<typeof newtonGetMe>>;
   let newtonData: Awaited<ReturnType<typeof fetchNewtonData>>;
   try {
+    newtonMe = await newtonGetMe(access_token);
     newtonData = await fetchNewtonData(access_token);
   } catch (err: any) {
     // Token is invalid — do not create any DB rows
-    res.status(400).json({
-      error:
-        "We couldn't connect to your Newton account with that token. Make sure you copied the full access_token value from credentials.json.",
-    });
+    const userMessage =
+      err instanceof NewtonAuthError
+        ? 'That token is invalid or expired. Please run `npx @newtonschool/newton-mcp@latest login` again and paste the new access_token.'
+        : "We couldn't connect to your Newton account with that token. Make sure you copied the full access_token value from credentials.json.";
+    res.status(400).json({ error: userMessage });
     return;
   }
 
-  // Fetch the student's own email from DB to compare with Newton account
-  const { data: studentUser } = await supabase
-    .from('users')
-    .select('id')
-    .eq('id', studentId)
-    .single();
-
-  // Get email via Supabase Auth (not from our users table, which doesn't store email)
+  // Cross-verify: Newton account email must match StudentWell account email
   const { data: authUserData } = await supabase.auth.admin.getUserById(studentId);
   const studentEmail = authUserData?.user?.email;
 
-  // Check Newton account email matches student email
-  const newtonProfile = await newtonGetMe(access_token);
-  if (newtonProfile && studentEmail) {
-    const newtonEmail = newtonProfile.email.toLowerCase().trim();
+  if (studentEmail) {
+    const newtonEmail = newtonMe.email.toLowerCase().trim();
     const swEmail = studentEmail.toLowerCase().trim();
     if (newtonEmail !== swEmail) {
       void supabase.from('audit_logs').insert({
@@ -81,13 +77,9 @@ router.post('/connect', async (req: Request, res: Response): Promise<void> => {
       actor_id: studentId,
       action: 'newton_connect_email_verified',
     });
-  } else if (!newtonProfile) {
-    // Could not verify — log warning but allow (Newton profile endpoint may not exist)
-    logger.warn({ studentId }, 'Newton email verification skipped: profile endpoint unavailable');
+  } else {
+    logger.warn({ studentId }, 'Newton email verification skipped: could not retrieve student email');
   }
-
-  // Suppress unused variable warning
-  void studentUser;
 
   // Encrypt before storing
   let encryptedToken: string;

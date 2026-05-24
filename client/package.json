@@ -1,11 +1,17 @@
 {
-  "name": "client",
+  "name": "@studentwell/client",
   "private": true,
   "version": "0.0.0",
+  "description": "StudentWell web client — React + Vite + Tailwind.",
+  "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "preview": "vite preview"
   },

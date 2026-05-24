@@ -1239,4 +1239,242 @@ router.get('/reports/semester', async (req: Request, res: Response): Promise<voi
   }
 });
 
+// ─── WELLNESS ANALYTICS (reflection-based aggregates) ────────────────────────
+// Population-level view derived from weekly_reflections + recommendations.
+// Complements /heatmap (structural by branch/batch) with sentiment data.
+router.get('/wellness-analytics', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const [reflectionsRes, recommendationsRes] = await Promise.all([
+      supabase
+        .from('weekly_reflections')
+        .select('student_id, emotional_score, severity, indicators, created_at')
+        .eq('tenant_id', tenantId)
+        .gte('created_at', thirtyDaysAgo),
+      supabase
+        .from('recommendations')
+        .select('type, priority, status')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active'),
+    ]);
+
+    const reflections = reflectionsRes.data ?? [];
+    const recommendations = recommendationsRes.data ?? [];
+
+    // Population sentiment averages
+    const emotionalScores = reflections
+      .map((r: any) => r.emotional_score)
+      .filter((v: any): v is number => typeof v === 'number');
+    const avgEmotional =
+      emotionalScores.length > 0
+        ? Math.round(emotionalScores.reduce((a: number, b: number) => a + b, 0) / emotionalScores.length)
+        : null;
+
+    // Per-indicator averages
+    const indicatorKeys = ['stress', 'loneliness', 'exhaustion', 'motivationDecline', 'anxiety', 'sleepDecline'];
+    const indicatorTotals: Record<string, { sum: number; count: number }> = {};
+    for (const k of indicatorKeys) indicatorTotals[k] = { sum: 0, count: 0 };
+    for (const r of reflections) {
+      const ind = ((r as any).indicators ?? {}) as Record<string, number>;
+      for (const k of indicatorKeys) {
+        if (typeof ind[k] === 'number') {
+          indicatorTotals[k].sum += ind[k];
+          indicatorTotals[k].count += 1;
+        }
+      }
+    }
+    const indicatorAverages: Record<string, number | null> = {};
+    for (const k of indicatorKeys) {
+      const { sum, count } = indicatorTotals[k];
+      indicatorAverages[k] = count > 0 ? Math.round(sum / count) : null;
+    }
+
+    // Severity distribution
+    const severityDist: Record<string, number> = { Low: 0, Moderate: 0, High: 0, Critical: 0 };
+    for (const r of reflections) {
+      const sev = (r as any).severity ?? 'Low';
+      if (sev in severityDist) severityDist[sev]++;
+    }
+
+    const reflectingStudents = new Set(reflections.map((r: any) => r.student_id)).size;
+
+    // Daily emotional heatmap (last 30d)
+    const dailyMap: Record<string, { sum: number; count: number }> = {};
+    for (const r of reflections) {
+      const r2 = r as any;
+      if (typeof r2.emotional_score !== 'number' || !r2.created_at) continue;
+      const day = String(r2.created_at).slice(0, 10);
+      if (!dailyMap[day]) dailyMap[day] = { sum: 0, count: 0 };
+      dailyMap[day].sum += r2.emotional_score;
+      dailyMap[day].count += 1;
+    }
+    const emotionalHeatmap = Object.entries(dailyMap)
+      .map(([day, { sum, count }]) => ({
+        day,
+        average_emotional_score: Math.round(sum / count),
+        count,
+      }))
+      .sort((a, b) => a.day.localeCompare(b.day));
+
+    // Active recommendation distribution
+    const recsByType: Record<string, number> = {};
+    const recsByPriority: Record<string, number> = { Low: 0, Moderate: 0, High: 0, Critical: 0 };
+    for (const rec of recommendations as any[]) {
+      recsByType[rec.type] = (recsByType[rec.type] ?? 0) + 1;
+      if (rec.priority in recsByPriority) recsByPriority[rec.priority]++;
+    }
+
+    res.json({
+      window_days: 30,
+      reflecting_students: reflectingStudents,
+      population: {
+        average_emotional_score: avgEmotional,
+        indicator_averages: indicatorAverages,
+        severity_distribution: severityDist,
+      },
+      emotional_heatmap: emotionalHeatmap,
+      active_recommendations: {
+        total: recommendations.length,
+        by_type: recsByType,
+        by_priority: recsByPriority,
+      },
+    });
+  } catch (err: any) {
+    logger.error({ err }, 'wellness-analytics failed');
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// ─── DROPOUT RISK — single student ──────────────────────────────────────────
+// Returns the full risk profile with factor breakdown. Manager-only.
+router.get('/risk/:studentId', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const { studentId } = req.params;
+
+    const [userRes, lmsRes, snapsRes] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, full_name, roll_number, branch, batch')
+        .eq('id', studentId)
+        .eq('tenant_id', tenantId)
+        .single(),
+      supabase
+        .from('lms_data')
+        .select(
+          'attendance_pct, assignment_completion_pct, assessments_completed, assessments_total, lectures_attended, lectures_total, xp_total, batch_rank, batch_size, dropout_risk_score, dropout_risk_level, dropout_risk_factors, dropout_risk_computed_at, synced_at',
+        )
+        .eq('student_id', studentId)
+        .eq('tenant_id', tenantId)
+        .maybeSingle(),
+      supabase
+        .from('lms_snapshots')
+        .select('attendance_pct, assignment_completion_pct, assessments_completed, assessments_total, captured_at')
+        .eq('student_id', studentId)
+        .eq('tenant_id', tenantId)
+        .order('captured_at', { ascending: false })
+        .limit(12),
+    ]);
+
+    if (userRes.error || !userRes.data) {
+      res.status(404).json({ error: 'Student not found' });
+      return;
+    }
+
+    res.json({
+      student: userRes.data,
+      lms: lmsRes.data,
+      snapshots: (snapsRes.data ?? []).slice().reverse(), // oldest-first for charts
+    });
+  } catch (err: any) {
+    logger.error({ err }, 'GET /risk/:studentId failed');
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// ─── DROPOUT RISK — cohort ranking ──────────────────────────────────────────
+// Ranks all students in the tenant by current dropout_risk_score (desc).
+// Supports optional ?branch=, ?batch=, ?min_level=high filters.
+router.get('/cohort-risk', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const { branch, batch, min_level } = req.query;
+
+    // 1. Fetch lms_data rows with a non-null risk score in this tenant
+    let lmsQuery = supabase
+      .from('lms_data')
+      .select(
+        'student_id, attendance_pct, assignment_completion_pct, dropout_risk_score, dropout_risk_level, dropout_risk_computed_at',
+      )
+      .eq('tenant_id', tenantId)
+      .not('dropout_risk_score', 'is', null);
+
+    const levelRanking: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+    if (typeof min_level === 'string' && min_level in levelRanking) {
+      const allowed = Object.entries(levelRanking)
+        .filter(([, rank]) => rank >= levelRanking[min_level])
+        .map(([lvl]) => lvl);
+      lmsQuery = lmsQuery.in('dropout_risk_level', allowed);
+    }
+
+    const { data: lmsRows, error: lmsErr } = await lmsQuery;
+    if (lmsErr) {
+      res.status(500).json({ error: 'Failed to fetch risk data' });
+      return;
+    }
+
+    if (!lmsRows || lmsRows.length === 0) {
+      res.json({ cohort: [], count: 0 });
+      return;
+    }
+
+    // 2. Join with users for name/branch/batch (and apply filters there)
+    const studentIds = lmsRows.map((r: any) => r.student_id);
+    let usersQuery = supabase
+      .from('users')
+      .select('id, full_name, roll_number, branch, batch')
+      .eq('tenant_id', tenantId)
+      .eq('role', 'student')
+      .eq('is_active', true)
+      .in('id', studentIds);
+
+    if (typeof branch === 'string' && branch.length > 0) {
+      usersQuery = usersQuery.eq('branch', branch);
+    }
+    if (typeof batch === 'string' && batch.length > 0) {
+      usersQuery = usersQuery.eq('batch', batch);
+    }
+
+    const { data: users } = await usersQuery;
+    const usersById = new Map((users ?? []).map((u: any) => [u.id, u]));
+
+    const cohort = lmsRows
+      .map((r: any) => {
+        const u = usersById.get(r.student_id);
+        if (!u) return null;
+        return {
+          student_id: r.student_id,
+          full_name: u.full_name,
+          roll_number: u.roll_number,
+          branch: u.branch,
+          batch: u.batch,
+          attendance_pct: r.attendance_pct,
+          assignment_completion_pct: r.assignment_completion_pct,
+          dropout_risk_score: r.dropout_risk_score,
+          dropout_risk_level: r.dropout_risk_level,
+          dropout_risk_computed_at: r.dropout_risk_computed_at,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .sort((a, b) => (b.dropout_risk_score ?? 0) - (a.dropout_risk_score ?? 0));
+
+    res.json({ cohort, count: cohort.length });
+  } catch (err: any) {
+    logger.error({ err }, 'GET /cohort-risk failed');
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
 export default router;

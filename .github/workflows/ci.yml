@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: typecheck + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (server + client)
+        run: npm run typecheck
+
+      - name: Test (server unit tests)
+        run: npm run test
+
+      - name: Build (server + client)
+        run: npm run build
+
+      - name: npm audit (advisories only)
+        run: npm audit --audit-level=high --workspaces --include-workspace-root
+        continue-on-error: true
