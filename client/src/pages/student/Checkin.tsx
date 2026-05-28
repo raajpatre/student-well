@@ -232,7 +232,7 @@ export const CheckinPage: React.FC = () => {
       </div>
 
       {/* Bottom Actions */}
-      <div className="fixed bottom-0 left-0 w-full px-container-padding pb-lg pt-md bg-gradient-to-t from-background via-background to-transparent flex flex-col items-center gap-2">
+      <div className="fixed bottom-0 left-0 w-full px-container-padding pb-[88px] pt-md bg-gradient-to-t from-background via-background to-transparent flex flex-col items-center gap-2">
         <button
           className="w-full h-[48px] bg-primary-container text-on-primary-container rounded-xl font-body-sm text-body-sm flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50"
           onClick={handleNext}
