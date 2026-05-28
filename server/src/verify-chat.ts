@@ -6,7 +6,7 @@ import { logger } from './lib/logger';
 dotenv.config();
 
 // Since we are mocking the request object, we will test the services directly
-import { getChatModel } from './services/geminiClient';
+import { getOpenAIClient, CHAT_MODEL, CHAT_SYSTEM_PROMPT } from './services/geminiClient';
 import { detectEscalation } from './services/escalationDetector';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -81,15 +81,21 @@ async function verify() {
     logger.error('Level 2 high risk flag was not created');
   }
 
-  // 4. Test Gemini Chat Response (Will fail if key is dummy, wrapped in try/catch)
-  logger.info('Testing Gemini Chat Generation');
+  // 4. Test OpenAI Chat Response (Will fail if key is missing, wrapped in try/catch)
+  logger.info('Testing OpenAI Chat Generation');
   try {
-    const model = getChatModel();
-    const chat = model.startChat({ history: [] });
-    const result = await chat.sendMessage("I am feeling a little stressed about exams.");
-    logger.info({ content: result.response.text() }, 'Gemini response received');
+    const openai = getOpenAIClient();
+    const completion = await openai.chat.completions.create({
+      model: CHAT_MODEL,
+      max_tokens: 100,
+      messages: [
+        { role: 'system', content: CHAT_SYSTEM_PROMPT },
+        { role: 'user', content: 'I am feeling a little stressed about exams.' },
+      ],
+    });
+    logger.info({ content: completion.choices[0].message.content }, 'OpenAI response received');
   } catch (error: any) {
-    logger.info({ err: error }, 'Gemini generation failed (expected if dummy key)');
+    logger.info({ err: error }, 'OpenAI generation failed (expected if key missing)');
   }
 
   logger.info('--- Verification Complete ---');
