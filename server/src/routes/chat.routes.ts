@@ -2,7 +2,7 @@
 import { Router, Request, Response } from 'express';
 import { supabase } from '../lib/supabase';
 import { authMiddleware } from '../middleware/auth';
-import { getChatModel, getSummaryModel } from '../services/geminiClient';
+import { getOpenAIClient, CHAT_MODEL, CHAT_SYSTEM_PROMPT } from '../services/geminiClient';
 import { detectEscalation } from '../services/escalationDetector';
 import { validateBody } from '../middleware/validateBody';
 import { chatMessageLimiter } from '../middleware/rateLimiters';
@@ -102,13 +102,13 @@ router.post('/message', chatMessageLimiter, validateBody(chatMessageSchema), asy
 
     const messageHistory = history || [];
 
-    // Format for Gemini
-    const formattedHistory = messageHistory.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
+    // Format history for OpenAI
+    const formattedHistory: { role: 'user' | 'assistant'; content: string }[] = messageHistory.map(msg => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.content,
     }));
 
-    // Save user message to DB (Do this before detecting escalation so logic is identical)
+    // Save user message to DB before detecting escalation
     await supabase.from('chatbot_messages').insert({
       session_id,
       tenant_id: tenantId,
@@ -118,63 +118,49 @@ router.post('/message', chatMessageLimiter, validateBody(chatMessageSchema), asy
 
     // Detect escalation (on raw message)
     const escalationLevel = await detectEscalation(
-      truncatedMessage, 
-      messageHistory as { role: string; content: string }[], 
-      session_id, 
-      studentId, 
+      truncatedMessage,
+      messageHistory as { role: string; content: string }[],
+      session_id,
+      studentId,
       tenantId
     );
 
-    let escalationInstruction = "";
+    let escalationInstruction = '';
     if (escalationLevel === 1) {
-      escalationInstruction = "\n\nCRITICAL INSTRUCTION FOR THIS TURN: The student seems distressed. In your response, gently ask if they would like to be connected with a real human counsellor.";
+      escalationInstruction = '\n\nCRITICAL INSTRUCTION FOR THIS TURN: The student seems distressed. In your response, gently ask if they would like to be connected with a real human counsellor.';
     } else if (escalationLevel === 2) {
-      escalationInstruction = "\n\nCRITICAL INSTRUCTION FOR THIS TURN: The student has expressed intent to self-harm. You must include the following crisis helplines in your response: iCall (9152987821) and Vandrevala Foundation (1860-2662-345). Be extremely empathetic.";
+      escalationInstruction = '\n\nCRITICAL INSTRUCTION FOR THIS TURN: The student has expressed intent to self-harm. You must include the following crisis helplines in your response: iCall (9152987821) and Vandrevala Foundation (1860-2662-345). Be extremely empathetic.';
     } else if (escalationLevel === 3) {
       escalationInstruction = "\n\nCRITICAL INSTRUCTION FOR THIS TURN: The student is in an active emergency. Lead with crisis resources (iCall: 9152987821) and ask directly: 'Are you safe right now?'";
     }
 
-    // Call Gemini API
-    const model = getChatModel();
-    const chat = model.startChat({ history: formattedHistory });
-    
-    let result;
+    // Call OpenAI API
+    const openai = getOpenAIClient();
+    let assistantResponse: string;
+
     try {
-      result = await chat.sendMessage(truncatedMessage + escalationInstruction);
+      const completion = await openai.chat.completions.create({
+        model: CHAT_MODEL,
+        max_tokens: 300,
+        messages: [
+          { role: 'system', content: CHAT_SYSTEM_PROMPT + escalationInstruction },
+          ...formattedHistory,
+          { role: 'user', content: truncatedMessage },
+        ],
+      });
+      assistantResponse = completion.choices[0].message.content ?? "I'm here to listen. Could you tell me more about what's on your mind?";
     } catch (apiError: any) {
-      logger.error({ status: apiError.status, message: apiError.message, err: apiError }, 'Gemini API error');
+      logger.error({ status: apiError.status, message: apiError.message, err: apiError }, 'OpenAI API error');
       if (apiError.status === 429) {
         res.json({
           session_id,
           message: "I'm a little busy right now — try again in a minute.",
-          escalation_level: escalationLevel
+          escalation_level: escalationLevel,
         });
         return;
       }
       throw apiError;
     }
-
-    // Safety check
-    if (result.response.candidates && result.response.candidates.length > 0) {
-      const candidate = result.response.candidates[0];
-      if (candidate.finishReason === 'SAFETY') {
-        await supabase.from('audit_logs').insert({
-          tenant_id: tenantId,
-          actor_id: studentId,
-          action: 'gemini_safety_block',
-          metadata: { session_id }
-        });
-        
-        res.json({
-          session_id,
-          message: "I want to make sure I respond thoughtfully. Could you tell me a bit more about what's on your mind?",
-          escalation_level: escalationLevel
-        });
-        return;
-      }
-    }
-
-    const assistantResponse = result.response.text();
 
     // Save assistant response
     await supabase.from('chatbot_messages').insert({
@@ -288,21 +274,18 @@ router.post('/sessions/:session_id/share', validateBody(shareSessionSchema), asy
   const conversationText = messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
 
   try {
-    const model = getSummaryModel();
-    const prompt = `Summarise this counselling conversation in 3-4 sentences. 
-Focus on what the student was feeling and what was discussed. 
-Do not include any specific personal details. Be warm and clinical-neutral.
-Conversation: ${conversationText}`;
-
-    const result = await model.generateContent(prompt);
-    
-    // Check safety
-    if (result.response.candidates && result.response.candidates.length > 0 && result.response.candidates[0].finishReason === 'SAFETY') {
-        res.status(500).json({ error: 'Summary generation failed due to safety settings.' });
-        return;
-    }
-    
-    const summary = result.response.text();
+    const openai = getOpenAIClient();
+    const completion = await openai.chat.completions.create({
+      model: CHAT_MODEL,
+      max_tokens: 200,
+      messages: [
+        {
+          role: 'user',
+          content: `Summarise this counselling conversation in 3-4 sentences. Focus on what the student was feeling and what was discussed. Do not include any specific personal details. Be warm and clinical-neutral.\n\nConversation:\n${conversationText}`,
+        },
+      ],
+    });
+    const summary = completion.choices[0].message.content ?? 'Summary unavailable.';
 
     const { error } = await supabase
       .from('chatbot_sessions')
