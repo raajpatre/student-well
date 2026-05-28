@@ -4,6 +4,13 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { apiCall } from '../../lib/api';
 import { useApi } from '../../hooks/useApi';
 
+interface SharedSession {
+  id: string;
+  started_at: string;
+  shared_summary: string | null;
+  escalation_level: number | null;
+}
+
 type StatusUpdate = 'contacted' | 'ongoing' | 'resolved' | 'escalated';
 
 interface StudentReport {
@@ -65,6 +72,8 @@ const statusUpdateOptions: { value: StatusUpdate; label: string }[] = [
 export const CounsellorStudentReport: React.FC = () => {
   const { id } = useParams();
   const { data: report, isLoading, error, refetch } = useApi<StudentReport>(id ? `/api/counsellor/students/${id}/report` : null);
+  const { data: sharedData } = useApi<{ sessions: SharedSession[] }>(id ? `/api/counsellor/students/${id}/shared-sessions` : null);
+  const sharedSessions = sharedData?.sessions || [];
   const [status, setStatus] = useState<StatusUpdate>('contacted');
   const [note, setNote] = useState('');
   const [formError, setFormError] = useState('');
@@ -273,6 +282,34 @@ export const CounsellorStudentReport: React.FC = () => {
             <p className="font-body-sm text-[13px] text-outline">No check-in scores in the last four weeks.</p>
           )}
         </section>
+
+        {/* Shared chat summaries */}
+        {sharedSessions.length > 0 && (
+          <section className="flex flex-col gap-xs">
+            <h2 className="font-body-md text-body-md text-on-surface-variant mb-2">
+              Shared by Student ({sharedSessions.length})
+            </h2>
+            <div className="flex flex-col gap-3">
+              {sharedSessions.map(session => (
+                <div key={session.id} className="bg-surface-container-lowest rounded-xl shadow-warm p-md flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-body-sm text-[12px] text-on-surface-variant">
+                      {new Date(session.started_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </span>
+                    {session.escalation_level && session.escalation_level >= 2 && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-error-container text-on-error-container">
+                        Sensitive
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-body-md text-[13px] text-on-surface leading-relaxed">
+                    {session.shared_summary || 'No summary available.'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Flag history */}
         <section className="flex flex-col gap-xs">

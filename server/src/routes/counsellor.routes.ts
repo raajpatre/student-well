@@ -245,6 +245,38 @@ router.patch('/assignments/:id/status', validateBody(counsellorStatusSchema), as
   }
 });
 
+router.get('/students/:id/shared-sessions', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const counsellorId = req.user!.id;
+    const studentId = req.params.id;
+
+    const { data: assignment } = await supabase
+      .from('counsellor_assignments')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .eq('counsellor_id', counsellorId)
+      .eq('student_id', studentId)
+      .maybeSingle();
+
+    if (!assignment) { res.status(403).json({ error: 'Student is not assigned to this counsellor' }); return; }
+
+    const { data: sessions, error } = await supabase
+      .from('chatbot_sessions')
+      .select('id, started_at, shared_summary, escalation_level')
+      .eq('student_id', studentId)
+      .eq('tenant_id', tenantId)
+      .eq('student_shared', true)
+      .order('started_at', { ascending: false });
+
+    if (error) { res.status(500).json({ error: 'Failed to fetch shared sessions' }); return; }
+
+    res.json({ sessions: sessions || [] });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
 router.get('/profile', async (req: Request, res: Response): Promise<void> => {
   try {
     const tenantId = getTenantId(req);
