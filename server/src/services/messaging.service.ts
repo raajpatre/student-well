@@ -1,18 +1,17 @@
 import nodemailer from 'nodemailer';
 import { logger } from '../lib/logger';
 
-const SMTP_HOST = process.env.SMTP_HOST;
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || '587');
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER;
 
 function getTransport() {
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
+  if (!SMTP_USER || !SMTP_PASS) {
+    logger.warn({ SMTP_USER: !!SMTP_USER, SMTP_PASS: !!SMTP_PASS }, 'SMTP credentials missing');
+    return null;
+  }
   return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: false,
+    service: 'gmail',
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
 }
