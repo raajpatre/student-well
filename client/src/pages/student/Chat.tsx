@@ -209,9 +209,9 @@ export const ChatPage: React.FC = () => {
 
   // Chat view
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100svh - 140px)' }}>
+    <div className="flex flex-col" style={{ height: 'calc(100svh - 80px)' }}>
       {/* Chat header */}
-      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-outline-variant/30">
+      <div className="flex items-center gap-3 mb-4 pb-3 border-b border-outline-variant/30 glass-header px-1 pt-3 sticky top-0 z-40">
         <button
           className="text-on-surface-variant hover:opacity-80 transition-opacity p-1"
           onClick={() => setShowSessions(true)}

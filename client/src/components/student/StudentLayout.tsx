@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
@@ -11,34 +11,37 @@ const navItems = [
 
 export const StudentLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  const location = useLocation();
+  const isChatPage = location.pathname === '/student/chat';
 
   const firstName = user?.full_name?.split(' ')[0] || 'Student';
   const initial = (user?.full_name?.[0] || 'S').toUpperCase();
 
   return (
     <div className="min-h-screen bg-surface font-body-md text-on-surface antialiased relative pb-24">
-      {/* Header */}
-      <header className="glass-header sticky top-0 z-40 px-container-padding py-md flex items-center justify-between shadow-[0_1px_0_rgba(232,226,217,0.5)]">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-medium shadow-warm text-[16px]">
-            {initial}
+      {/* Header — hidden on chat page (chat manages its own header) */}
+      {!isChatPage && (
+        <header className="glass-header sticky top-0 z-40 px-container-padding py-md flex items-center justify-between shadow-[0_1px_0_rgba(232,226,217,0.5)]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-medium shadow-warm text-[16px]">
+              {initial}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[15px] font-medium text-on-surface leading-tight">{firstName}</span>
+              <span className="text-[11px] text-on-surface-variant mt-0.5">Student</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[15px] font-medium text-on-surface leading-tight">{firstName}</span>
-            <span className="text-[11px] text-on-surface-variant mt-0.5">Student</span>
+          <div
+            className="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-warm"
+            title="Notifications"
+          >
+            <span className="material-symbols-outlined text-[20px] text-outline">notifications</span>
           </div>
-        </div>
-        {/* Notifications — non-interactive placeholder until notification system is built */}
-        <div
-          className="w-10 h-10 rounded-full bg-surface-container-lowest flex items-center justify-center shadow-warm"
-          title="Notifications"
-        >
-          <span className="material-symbols-outlined text-[20px] text-outline">notifications</span>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Main content */}
-      <main className="px-container-padding pt-md flex flex-col gap-xl max-w-lg mx-auto">
+      <main className={`px-container-padding flex flex-col gap-xl max-w-lg mx-auto ${isChatPage ? '' : 'pt-md'}`}>
         {children}
       </main>
 
