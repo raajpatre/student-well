@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const navItems = [
   { to: '/counsellor/dashboard', iconInactive: 'home', iconActive: 'home', label: 'Home' },
+  { to: '/counsellor/shared-feed', iconInactive: 'forum', iconActive: 'forum', label: 'Shared' },
   { to: '/counsellor/profile', iconInactive: 'person', iconActive: 'person', label: 'My Profile' },
 ];
 

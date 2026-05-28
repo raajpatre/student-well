@@ -3,7 +3,7 @@ import { Router, Request, Response } from 'express';
 import { supabase } from '../lib/supabase';
 import { getTenantId } from '../utils/tenant';
 import { validateBody } from '../middleware/validateBody';
-import { counsellorStatusSchema, profileEditRequestSchema } from '../validators/counsellor.validators';
+import { counsellorStatusSchema, profileEditRequestSchema, selfAssignSchema } from '../validators/counsellor.validators';
 import { logger } from '../lib/logger';
 
 const router = Router();
@@ -240,6 +240,128 @@ router.patch('/assignments/:id/status', validateBody(counsellorStatusSchema), as
     }
 
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+// ─── SHARED FEED ─────────────────────────────────────────────────────────────
+
+router.get('/shared-feed', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const counsellorId = req.user!.id;
+
+    const [sessionsRes, myAssignmentsRes] = await Promise.all([
+      supabase.from('chatbot_sessions')
+        .select('id, student_id, started_at, shared_summary, escalation_level')
+        .eq('tenant_id', tenantId)
+        .eq('student_shared', true)
+        .order('started_at', { ascending: false })
+        .limit(50),
+      supabase.from('counsellor_assignments')
+        .select('student_id')
+        .eq('counsellor_id', counsellorId)
+        .eq('tenant_id', tenantId)
+        .in('status', ['pending_contact', 'contacted', 'ongoing']),
+    ]);
+
+    const myStudentIds = new Set((myAssignmentsRes.data || []).map((a: any) => a.student_id));
+    const feedSessions = (sessionsRes.data || []).filter((s: any) => !myStudentIds.has(s.student_id));
+
+    const studentIds = [...new Set(feedSessions.map((s: any) => s.student_id))];
+    const placeholder = ['00000000-0000-0000-0000-000000000000'];
+
+    const [studentsRes, allAssignmentsRes] = await Promise.all([
+      supabase.from('users').select('id, full_name, branch, batch')
+        .in('id', studentIds.length ? studentIds : placeholder)
+        .eq('tenant_id', tenantId),
+      supabase.from('counsellor_assignments').select('student_id')
+        .eq('tenant_id', tenantId)
+        .in('student_id', studentIds.length ? studentIds : placeholder)
+        .in('status', ['pending_contact', 'contacted', 'ongoing']),
+    ]);
+
+    const studentMap: Record<string, any> = {};
+    (studentsRes.data || []).forEach((s: any) => { studentMap[s.id] = s; });
+    const assignedIds = new Set((allAssignmentsRes.data || []).map((a: any) => a.student_id));
+
+    const feed = feedSessions.map((s: any) => ({
+      session_id: s.id,
+      student_id: s.student_id,
+      student_name: studentMap[s.student_id]?.full_name || 'Unknown',
+      branch: studentMap[s.student_id]?.branch || null,
+      batch: studentMap[s.student_id]?.batch || null,
+      shared_at: s.started_at,
+      summary: s.shared_summary,
+      escalation_level: s.escalation_level,
+      already_assigned: assignedIds.has(s.student_id),
+    }));
+
+    res.json({ feed });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+});
+
+router.post('/self-assign', validateBody(selfAssignSchema), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenantId = getTenantId(req);
+    const counsellorId = req.user!.id;
+    const { student_id, session_id, reason } = req.body;
+
+    const { data: student } = await supabase.from('users').select('id, full_name')
+      .eq('id', student_id).eq('tenant_id', tenantId).eq('role', 'student').single();
+
+    if (!student) { res.status(404).json({ error: 'Student not found' }); return; }
+
+    const { data: existingAssignment } = await supabase.from('counsellor_assignments')
+      .select('id, counsellor_id').eq('student_id', student_id).eq('tenant_id', tenantId)
+      .in('status', ['pending_contact', 'contacted', 'ongoing']).maybeSingle();
+
+    if (existingAssignment) {
+      res.status(409).json({
+        error: existingAssignment.counsellor_id === counsellorId
+          ? 'You are already assigned to this student'
+          : 'This student is already assigned to another counsellor',
+      });
+      return;
+    }
+
+    // Use existing unassigned flag or create a watch-level flag
+    const { data: existingFlag } = await supabase.from('flags').select('id')
+      .eq('student_id', student_id).eq('tenant_id', tenantId)
+      .eq('status', 'unassigned').order('created_at', { ascending: false }).limit(1).maybeSingle();
+
+    let flagId: string;
+
+    if (existingFlag) {
+      flagId = existingFlag.id;
+      await supabase.from('flags').update({ status: 'assigned' }).eq('id', flagId);
+    } else {
+      const { data: newFlag, error: flagErr } = await supabase.from('flags').insert({
+        tenant_id: tenantId, student_id, risk_level: 'watch',
+        triggered_dimensions: [], status: 'assigned', weeks_flagged: 1,
+      }).select('id').single();
+      if (flagErr || !newFlag) { res.status(500).json({ error: 'Failed to create flag' }); return; }
+      flagId = newFlag.id;
+    }
+
+    const managerNote = `Self-assigned by counsellor. Reason: ${reason}`;
+    const { data: assignment, error: assignErr } = await supabase.from('counsellor_assignments').insert({
+      tenant_id: tenantId, student_id, counsellor_id: counsellorId,
+      flag_id: flagId, manager_note: managerNote, status: 'pending_contact',
+    }).select('id').single();
+
+    if (assignErr || !assignment) { res.status(500).json({ error: 'Failed to create assignment' }); return; }
+
+    await supabase.from('audit_logs').insert({
+      tenant_id: tenantId, actor_id: counsellorId,
+      action: 'counsellor_self_assigned', target_id: student_id,
+      metadata: { assignment_id: assignment.id, session_id, reason },
+    });
+
+    res.json({ success: true, assignment_id: assignment.id });
   } catch (err: any) {
     res.status(500).json({ error: 'Something went wrong.' });
   }

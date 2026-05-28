@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import { uuidSchema } from './common';
+
+export const selfAssignSchema = z.object({
+  student_id: uuidSchema,
+  session_id: uuidSchema,
+  reason: z.string().trim().min(10, 'Please provide a reason (at least 10 characters)').max(500),
+}).strict();
 
 export const counsellorStatusSchema = z.object({
   status: z.enum(['contacted', 'ongoing', 'resolved', 'escalated']),
