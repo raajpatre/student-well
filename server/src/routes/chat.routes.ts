@@ -142,6 +142,7 @@ router.post('/message', chatMessageLimiter, validateBody(chatMessageSchema), asy
     try {
       result = await chat.sendMessage(truncatedMessage + escalationInstruction);
     } catch (apiError: any) {
+      logger.error({ status: apiError.status, message: apiError.message, err: apiError }, 'Gemini API error');
       if (apiError.status === 429) {
         res.json({
           session_id,
