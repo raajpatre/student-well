@@ -23,6 +23,9 @@ const CounsellorPortal = lazy(() =>
 const ActivatePage = lazy(() =>
   import('./pages/ActivatePage').then((m) => ({ default: m.ActivatePage })),
 );
+const ResetPasswordPage = lazy(() =>
+  import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
+);
 
 const RouteFallback: React.FC = () => (
   <div className="min-h-screen bg-background flex items-center justify-center">
@@ -38,6 +41,7 @@ function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/activate" element={<ActivatePage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             <Route

@@ -1,0 +1,215 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+const PasswordRequirement: React.FC<{ met: boolean; label: string }> = ({ met, label }) => (
+  <div className={`flex items-center gap-2 text-[12px] transition-colors ${met ? 'text-sage-green' : 'text-outline'}`}>
+    <span className="material-symbols-outlined" style={{ fontSize: '14px', fontVariationSettings: met ? "'FILL' 1" : "'FILL' 0" }}>
+      {met ? 'check_circle' : 'radio_button_unchecked'}
+    </span>
+    {label}
+  </div>
+);
+
+export const ResetPasswordPage: React.FC = () => {
+  const navigate = useNavigate();
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState(false);
+
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const hasLength = password.length >= 8;
+  const hasNumber = /[0-9]/.test(password);
+  const hasLetter = /[a-zA-Z]/.test(password);
+  const passwordsMatch = password === confirmPassword && confirmPassword.length > 0;
+
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const token = params.get('access_token');
+    const type = params.get('type');
+
+    if (!token || type !== 'recovery') {
+      setTokenError(true);
+      return;
+    }
+    setAccessToken(token);
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accessToken || !hasLength || !hasNumber || !hasLetter || !passwordsMatch) return;
+
+    setSubmitting(true);
+    setSubmitError('');
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: accessToken, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSubmitError(data.error || 'Failed to reset password. Please try again.');
+        return;
+      }
+
+      setSuccess(true);
+    } catch {
+      setSubmitError('Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (tokenError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="bg-surface-container-lowest rounded-card shadow-warm p-lg text-center max-w-sm w-full">
+          <div className="w-14 h-14 rounded-full bg-error-container flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-on-error-container" style={{ fontSize: '28px' }}>link_off</span>
+          </div>
+          <h1 className="text-[20px] font-light text-on-surface mb-2">Invalid reset link</h1>
+          <p className="text-[13px] text-outline leading-relaxed">
+            This password reset link is invalid or has expired. Please request a new one.
+          </p>
+          <button
+            onClick={() => navigate('/login')}
+            className="mt-6 w-full h-[44px] bg-primary-container text-on-primary rounded-btn font-body-md hover:bg-primary transition-colors"
+          >
+            Back to Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="bg-surface-container-lowest rounded-card shadow-warm p-lg text-center max-w-sm w-full">
+          <div className="w-14 h-14 rounded-full bg-primary-fixed flex items-center justify-center mx-auto mb-4">
+            <span
+              className="material-symbols-outlined text-on-primary-fixed"
+              style={{ fontSize: '28px', fontVariationSettings: "'FILL' 1" }}
+            >
+              check_circle
+            </span>
+          </div>
+          <h1 className="text-[22px] font-light text-on-surface mb-2">Password updated</h1>
+          <p className="text-[13px] text-outline mb-6">You can now sign in with your new password.</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full h-[48px] bg-primary-container text-on-primary rounded-btn font-body-md hover:bg-primary transition-colors"
+          >
+            Sign in to StudentWell
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-background min-h-screen font-body-md text-on-surface antialiased flex flex-col items-center pt-[100px] px-container-padding">
+      <div className="flex flex-col items-center mb-8">
+        <div className="mb-3 text-primary-container">
+          <span className="material-symbols-outlined" style={{ fontSize: '32px', fontVariationSettings: "'FILL' 1" }}>
+            eco
+          </span>
+        </div>
+        <h1 className="text-[26px] font-light text-primary-container tracking-tight">StudentWell</h1>
+      </div>
+
+      <div className="w-full max-w-sm">
+        <div className="bg-surface-container-lowest rounded-card shadow-warm p-lg w-full">
+          <div className="mb-6">
+            <h2 className="text-[20px] font-light text-on-surface mb-1">Set your password</h2>
+            <p className="text-[13px] text-outline">Choose a password to access your account.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {submitError && (
+              <div className="bg-error-container text-on-error-container rounded-input px-4 py-3 text-[13px]">
+                {submitError}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-[12px] text-on-surface-variant mb-1">New password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  className="w-full h-[44px] bg-background border border-custom-divider rounded-input px-4 pr-10 text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:border-primary-container transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-outline hover:text-on-surface-variant"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                    {showPassword ? 'visibility' : 'visibility_off'}
+                  </span>
+                </button>
+              </div>
+              {password.length > 0 && (
+                <div className="mt-2 flex flex-col gap-1">
+                  <PasswordRequirement met={hasLength} label="At least 8 characters" />
+                  <PasswordRequirement met={hasNumber} label="Contains a number" />
+                  <PasswordRequirement met={hasLetter} label="Contains a letter" />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[12px] text-on-surface-variant mb-1">Confirm password</label>
+              <div className="relative">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="w-full h-[44px] bg-background border border-custom-divider rounded-input px-4 pr-10 text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:border-primary-container transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(v => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-outline hover:text-on-surface-variant"
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                    {showConfirm ? 'visibility' : 'visibility_off'}
+                  </span>
+                </button>
+              </div>
+              {confirmPassword.length > 0 && !passwordsMatch && (
+                <p className="mt-1 text-[12px] text-on-error-container">Passwords do not match</p>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={submitting || !hasLength || !hasNumber || !hasLetter || !passwordsMatch}
+                className="w-full h-[48px] bg-primary-container text-on-primary rounded-btn font-body-md hover:bg-primary transition-colors disabled:opacity-50"
+              >
+                {submitting ? 'Saving…' : 'Set password'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};

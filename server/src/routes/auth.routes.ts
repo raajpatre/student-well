@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { authMiddleware } from '../middleware/auth';
 import { validateBody } from '../middleware/validateBody';
 import { loginLimiter } from '../middleware/rateLimiters';
-import { emptyBodySchema, loginSchema, activateSchema } from '../validators/auth.validators';
+import { emptyBodySchema, loginSchema, activateSchema, resetPasswordSchema } from '../validators/auth.validators';
 import { activationLimiter } from '../middleware/rateLimiters';
 import { logger } from '../lib/logger';
 
@@ -216,6 +216,30 @@ router.post('/activate', activationLimiter, validateBody(activateSchema), async 
     res.json({ activated: true, role: 'student' });
   } catch (err: any) {
     logger.error({ err }, 'Activation error');
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/reset-password', validateBody(resetPasswordSchema), async (req: Request, res: Response): Promise<void> => {
+  const { access_token, password } = req.body;
+
+  try {
+    const { data: authData, error: authError } = await supabase.auth.getUser(access_token);
+    if (authError || !authData.user) {
+      res.status(401).json({ error: 'Invalid or expired reset link' });
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.admin.updateUserById(authData.user.id, { password });
+    if (updateError) {
+      logger.error({ err: updateError }, 'Failed to reset password');
+      res.status(500).json({ error: 'Failed to update password' });
+      return;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error({ err: error }, 'Reset password error');
     res.status(500).json({ error: 'Internal server error' });
   }
 });

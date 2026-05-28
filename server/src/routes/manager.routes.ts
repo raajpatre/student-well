@@ -717,9 +717,11 @@ router.post('/counsellors', validateBody(createCounsellorSchema), async (req: Re
     }
 
     // Send reset link
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
     const { data: linkData, error: linkErr } = await supabase.auth.admin.generateLink({
       type: 'recovery',
-      email
+      email,
+      options: { redirectTo: `${clientUrl}/reset-password` },
     });
 
     if (!linkErr && linkData.properties?.action_link) {
