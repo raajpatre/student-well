@@ -28,10 +28,18 @@ CREATE TABLE IF NOT EXISTS student_invites (
   expires_at      TIMESTAMPTZ NOT NULL,
   activated_at    TIMESTAMPTZ,
   resend_count    INTEGER NOT NULL DEFAULT 0,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (tenant_id, email),
-  UNIQUE (tenant_id, roll_number)
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Partial unique indexes: only enforce uniqueness for active (non-expired) invites
+-- This allows re-inviting a student after their previous invite expires
+CREATE UNIQUE INDEX IF NOT EXISTS idx_student_invites_unique_active_email
+  ON student_invites (tenant_id, email)
+  WHERE status != 'expired';
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_student_invites_unique_active_roll
+  ON student_invites (tenant_id, roll_number)
+  WHERE status != 'expired';
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_student_invites_tenant_status  ON student_invites (tenant_id, status);

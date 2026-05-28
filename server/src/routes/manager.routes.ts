@@ -4,7 +4,7 @@ import multer from 'multer';
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
 import { getTenantId } from '../utils/tenant';
-import { sendRecoveryMessage } from '../services/messaging.service';
+import { sendRecoveryMessage, sendActivationEmail } from '../services/messaging.service';
 import crypto from 'crypto';
 import { validateBody } from '../middleware/validateBody';
 import { studentImportLimiter } from '../middleware/rateLimiters';
@@ -347,17 +347,9 @@ router.post('/students/invite-single', validateBody(inviteSingleSchema), async (
       return;
     }
 
-    // Send activation email via Supabase recovery link
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-    const { error: linkErr } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-      options: { redirectTo: `${clientUrl}/activate?token=${invite_token}` },
-    });
-
-    if (linkErr) {
-      logger.error({ err: linkErr, email }, 'Failed to generate activation link');
-    }
+    const activationLink = `${clientUrl}/activate?token=${invite_token}`;
+    void sendActivationEmail(email, full_name, activationLink);
 
     await supabase.from('audit_logs').insert({
       tenant_id: tenantId,
@@ -501,11 +493,7 @@ router.post('/students/invite-bulk', inviteBulkLimiter, upload.single('file'), v
         continue;
       }
 
-      await supabase.auth.admin.generateLink({
-        type: 'recovery',
-        email,
-        options: { redirectTo: `${clientUrl}/activate?token=${invite_token}` },
-      });
+      void sendActivationEmail(email, full_name, `${clientUrl}/activate?token=${invite_token}`);
 
       invited++;
     } catch (rowErr: any) {
