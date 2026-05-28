@@ -7,7 +7,7 @@ const requiredEnvs = [
   'CLIENT_URL',
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
-  'GEMINI_API_KEY',
+  'OPENAI_API_KEY',
   'ENCRYPTION_KEY',
   'JWT_SECRET',
   'NODE_ENV'
@@ -35,7 +35,7 @@ export const env = {
   SUPABASE_URL: process.env.SUPABASE_URL as string,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY as string,
   ENCRYPTION_KEY: process.env.ENCRYPTION_KEY as string,
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY as string,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY as string,
   WHATSAPP_API_TOKEN: process.env.WHATSAPP_API_TOKEN,
   WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID,
   JWT_SECRET: process.env.JWT_SECRET as string,
