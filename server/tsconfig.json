@@ -7,13 +7,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    
-    "baseUrl": ".",
-    "paths": {
-      "@shared/*": ["../shared/types/*"]
-    },
-    "ignoreDeprecations": "6.0"
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["src/**/*"],
   "exclude": ["tests/**/*", "dist/**/*", "node_modules/**/*"]
