@@ -78,11 +78,14 @@ function formatDate(d: string | null) {
 
 // ─── Assignment Modal ─────────────────────────────────────────────────────────
 const AssignModal: React.FC<{
-  report: StudentReport;
+  report: StudentReport | null;
+  flag: FlagRow;
   flagId: string;
   onClose: () => void;
   onSuccess: () => void;
-}> = ({ report, flagId, onClose, onSuccess }) => {
+}> = ({ report, flag, flagId, onClose, onSuccess }) => {
+  const studentId = report?.student.id ?? flag.student_id;
+  const studentName = report?.student.full_name ?? flag.student_name;
   const { data: cData } = useApi<Counsellor[]>('/api/manager/counsellors');
   const counsellors = cData || [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -97,7 +100,7 @@ const AssignModal: React.FC<{
       await apiCall('/api/manager/assignments', {
         method: 'POST',
         body: JSON.stringify({
-          student_id: report.student.id,
+          student_id: studentId,
           counsellor_id: selectedId,
           flag_id: flagId,
           manager_note: note || null,
@@ -112,7 +115,7 @@ const AssignModal: React.FC<{
     }
   };
 
-  const snap = report.wellness_snapshot;
+  const snap = report?.wellness_snapshot ?? null;
 
   return (
     <div
@@ -124,7 +127,7 @@ const AssignModal: React.FC<{
         <div className="flex items-center justify-between px-lg py-md border-b border-custom-divider flex-shrink-0">
           <div>
             <h2 className="text-[16px] font-medium text-on-surface">Assign Counsellor</h2>
-            <p className="text-[12px] text-on-surface-variant mt-0.5">{report.student.full_name}</p>
+            <p className="text-[12px] text-on-surface-variant mt-0.5">{studentName}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg text-outline hover:bg-surface-container transition-colors">
             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>close</span>
@@ -136,9 +139,9 @@ const AssignModal: React.FC<{
           <div className="flex-1 overflow-y-auto p-lg border-r border-custom-divider">
             <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-3">Student Summary</p>
             <div className="flex flex-col gap-1.5 text-[13px] mb-5">
-              <div><span className="text-on-surface-variant">Roll: </span>{report.student.roll_number || '—'}</div>
-              <div><span className="text-on-surface-variant">Branch: </span>{report.student.branch || '—'} · Batch {report.student.batch || '—'}</div>
-              <div><span className="text-on-surface-variant">Semester: </span>{report.student.semester || '—'}</div>
+              <div><span className="text-on-surface-variant">Roll: </span>{report?.student.roll_number || '—'}</div>
+              <div><span className="text-on-surface-variant">Branch: </span>{report?.student.branch || flag.branch || '—'} · Batch {report?.student.batch || flag.batch || '—'}</div>
+              <div><span className="text-on-surface-variant">Semester: </span>{report?.student.semester || flag.semester || '—'}</div>
             </div>
 
             {snap && (
@@ -162,11 +165,11 @@ const AssignModal: React.FC<{
               </div>
             )}
 
-            {report.checkin_trend.length > 0 && (
+            {(report?.checkin_trend.length ?? 0) > 0 && (
               <>
                 <p className="text-label-caps text-on-surface-variant uppercase tracking-wider mb-3">4-Week Check-in Trend</p>
                 <ResponsiveContainer width="100%" height={100}>
-                  <LineChart data={report.checkin_trend}>
+                  <LineChart data={report!.checkin_trend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E8E2D9" vertical={false} />
                     <XAxis dataKey="week_start" tick={{ fontSize: 9, fill: '#B0A89E' }} tickLine={false} axisLine={false} tickFormatter={w => w.slice(5)} />
                     <YAxis domain={[0, 10]} hide />
@@ -263,7 +266,7 @@ const AssignModal: React.FC<{
 const SlideOver: React.FC<{
   flag: FlagRow;
   onClose: () => void;
-  onAssign: (report: StudentReport, flagId: string) => void;
+  onAssign: (report: StudentReport | null, flagId: string) => void;
 }> = ({ flag, onClose, onAssign }) => {
   const { data: report, isLoading } = useApi<StudentReport>(`/api/manager/students/${flag.student_id}/report`);
 
@@ -375,9 +378,9 @@ const SlideOver: React.FC<{
           >
             Close
           </button>
-          {report && flag.flag_status !== 'assigned' && (
+          {flag.flag_status !== 'assigned' && (
             <button
-              onClick={() => onAssign(report, flag.flag_id)}
+              onClick={() => onAssign(report ?? null, flag.flag_id)}
               className="px-4 py-2 rounded-btn bg-primary text-on-primary text-[14px] font-medium hover:bg-primary/90 transition-colors"
             >
               Assign Counsellor
@@ -533,7 +536,7 @@ export const StudentsPage: React.FC = () => {
   const [riskLevel, setRiskLevel] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedFlag, setSelectedFlag] = useState<FlagRow | null>(null);
-  const [assignTarget, setAssignTarget] = useState<{ report: StudentReport; flagId: string } | null>(null);
+  const [assignTarget, setAssignTarget] = useState<{ report: StudentReport | null; flag: FlagRow; flagId: string } | null>(null);
 
   const params = new URLSearchParams();
   if (branch) params.set('branch', branch);
@@ -703,7 +706,7 @@ export const StudentsPage: React.FC = () => {
         <SlideOver
           flag={selectedFlag}
           onClose={() => setSelectedFlag(null)}
-          onAssign={(report, flagId) => setAssignTarget({ report, flagId })}
+          onAssign={(report, flagId) => setAssignTarget({ report, flag: selectedFlag!, flagId })}
         />
       )}
 
@@ -711,6 +714,7 @@ export const StudentsPage: React.FC = () => {
       {assignTarget && (
         <AssignModal
           report={assignTarget.report}
+          flag={assignTarget.flag}
           flagId={assignTarget.flagId}
           onClose={() => setAssignTarget(null)}
           onSuccess={handleAssignSuccess}
